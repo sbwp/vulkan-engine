@@ -3,8 +3,11 @@
 #endif
 
 #include <iostream>
+#include "graphics/renderer.hpp"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    Core::Game game{ "Michael's Toys", 0, 1, 0};
+    Graphics::Renderer renderer(game);
+    renderer.start();
     return 0;
 }

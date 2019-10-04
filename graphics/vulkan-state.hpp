@@ -9,7 +9,7 @@
 
 namespace Graphics {
     struct VulkanState {
-        vk::Instance
+        vk::Instance instance;
     };
 }
 

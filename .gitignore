@@ -3,3 +3,6 @@ cmake-build-debug/*
 build/*
 intermediate/*
 *.xcodeproj*
+/vulkan-engine/graphics/renderer.hpp:12:0,
+                 from /home/sabrina/Code/vulkan-engine/graphics/renderer.cpp:5:
+/home/sabrina/Code/vulkan-engine/grap
