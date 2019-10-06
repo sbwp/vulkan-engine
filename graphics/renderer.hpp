@@ -18,10 +18,12 @@
 namespace Graphics {
 class Renderer: public Util::Runnable {
     public:
-        explicit Renderer(Core::Game game);
+        explicit Renderer(Core::Game& game);
         ~Renderer() override;
 
     private:
+        Core::Game& game;
+
         std::vector<const char*> instanceExtensions {
             VK_KHR_SURFACE_EXTENSION_NAME
         };
@@ -31,11 +33,14 @@ class Renderer: public Util::Runnable {
         std::vector<const char*> validationLayers {};
         GLFWwindow* window;
         vk::Instance instance;
+        vk::SurfaceKHR surface;
 
         void run() override;
         bool shouldContinue() override;
 
         void initializeGLFW();
+        void createInstance();
+        void createSurface();
     };
 }
 
