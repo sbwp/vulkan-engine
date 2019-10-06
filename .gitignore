@@ -8,7 +8,6 @@ CMakeCache.txt
 Makefile
 vulkan_engine
 vulkan_engine.cbp
-.gitignore
 graphics/renderer.cpp
 graphics/renderer.hpp
 CMakeFiles/
