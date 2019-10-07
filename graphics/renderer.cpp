@@ -13,35 +13,22 @@
 
 namespace Graphics {
     Renderer::Renderer(Core::Game& game): game(game) {
-        initializeGLFW();
+        window = glfw::Window(1820, 980, "Vulkan Engine");
+        glfw::appendRequiredExtensions(instanceExtensions);
         setupValidationLayers(instanceExtensions, validationLayers);
         createInstance();
-        createSurface();
-
+        surface = window.createSurface(instance);
+        choosePhysicalDevice();
     }
 
-    Renderer::~Renderer() {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-    }
-
-    void Renderer::initializeGLFW() {
-        glfwInit();
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window = glfwCreateWindow(1820, 980, "Vulkan Engine", nullptr, nullptr);
-        uint32_t glfwRequiredExtensionsCount;
-        auto glfwRequiredExtensions = glfwGetRequiredInstanceExtensions(&glfwRequiredExtensionsCount);
-        for (uint32_t i = 0; i < glfwRequiredExtensionsCount; ++i) {
-            instanceExtensions.push_back(glfwRequiredExtensions[i]);
-        }
-    }
+    Renderer::~Renderer() = default; // Remove if nothing ends up going here.
 
     void Renderer::run() {
-        glfwPollEvents();
+        glfw::tick();
     }
 
     bool Renderer::shouldContinue() {
-        return !glfwWindowShouldClose(window);
+        return !window.shouldClose();
     }
 
     void Renderer::createInstance() {
@@ -59,11 +46,12 @@ namespace Graphics {
         setupValidationCallback();
     }
 
-    void Renderer::createSurface() {
-        VkSurfaceKHR c_surface;
-        if (glfwCreateWindowSurface(static_cast<VkInstance>(instance), window, nullptr, &c_surface) != VK_SUCCESS) {
-            throw Logger::error("failed to create window surface!");
+    void Renderer::choosePhysicalDevice() {
+        auto devices = instance.enumeratePhysicalDevices();
+        Logger::assertNotEmpty(devices, "No physical devices found.");
+        for (auto device : devices) {
+            auto queueFamilies = device.getQueueFamilyProperties();
+            Logger::assertNotEmpty(queueFamilies, "No Queue families found.");
         }
-        surface = vk::SurfaceKHR(c_surface);
     }
 }

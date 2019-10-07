@@ -13,13 +13,37 @@ namespace Logger {
         using std::runtime_error::runtime_error;
     };
 
+    /*
+     * assertTrue and assertFalse are implemented separately for now for performance
+     * since implementation is simple. If implementation becomes complex, make one call
+     * the other if appropriate.
+     */
+    void assertTrue(bool condition, std::string const& errorMessage) {
+        if (!condition) {
+            throw error(errorMessage);
+        }
+    }
+
+    void assertFalse(bool condition, std::string const& errorMessage) {
+        if (condition) {
+            throw error(errorMessage);
+        }
+    }
+
+    template <typename T>
+    void assertNotEmpty(T collection, std::string const& errorMessage) {
+        if (collection.empty()) {
+            throw error(errorMessage);
+        }
+    }
+
     template<typename T>
-    void log (T t) {
+    void log(T t) {
         std::cout << t << std::endl;
     }
 
     template<typename T, typename... Args>
-    void log (T t, Args... args) {
+    void log(T t, Args... args) {
         std::cout << t;
         log(args...);
     }

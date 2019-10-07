@@ -5,7 +5,7 @@ find_package(Vulkan REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(vulkan_engine main.cpp graphics/renderer.cpp graphics/renderer.hpp logger/logger.hpp graphics/validation.cpp graphics/validation.hpp graphics/vulkan-state.cpp graphics/vulkan-state.hpp core/game.hpp util/runnable.hpp util/runnable.cpp)
+add_executable(vulkan_engine main.cpp graphics/renderer.cpp graphics/renderer.hpp logger/logger.hpp graphics/validation.cpp graphics/validation.hpp graphics/vulkan-state.cpp graphics/vulkan-state.hpp core/game.hpp util/runnable.hpp util/runnable.cpp glfw/window.cpp glfw/window.hpp)
 
 target_link_libraries(vulkan_engine glfw)
 target_link_libraries(vulkan_engine Vulkan::Vulkan)

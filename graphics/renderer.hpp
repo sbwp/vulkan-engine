@@ -9,9 +9,7 @@
 #include <vector>
 #include <string>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
+#include "../glfw/window.hpp"
 #include "../core/game.hpp"
 #include "../util/runnable.hpp"
 
@@ -31,16 +29,16 @@ class Renderer: public Util::Runnable {
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
         std::vector<const char*> validationLayers {};
-        GLFWwindow* window;
+        glfw::Window window;
         vk::Instance instance;
         vk::SurfaceKHR surface;
+        vk::PhysicalDevice physicalDevice;
 
         void run() override;
         bool shouldContinue() override;
 
-        void initializeGLFW();
         void createInstance();
-        void createSurface();
+        void choosePhysicalDevice();
     };
 }
 
