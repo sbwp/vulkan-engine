@@ -11,11 +11,14 @@
 namespace Graphics {
     class PhysicalDevice {
     public:
-        PhysicalDevice(vk::PhysicalDevice &device, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
+        PhysicalDevice(vk::PhysicalDevice device, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
 
         bool operator<(PhysicalDevice& other);
+        std::vector<vk::DeviceQueueCreateInfo> getDeviceQueueCreateInfos(float* queuePriorities);
+        vk::Device createLogicalDevice(vk::DeviceCreateInfo const& createInfo);
+        bool isUsable();
     private:
-        vk::PhysicalDevice& device;
+        vk::PhysicalDevice device;
         vk::SurfaceKHR& surface;
 
         std::vector<vk::QueueFamilyProperties> queueFamilies;
@@ -33,8 +36,9 @@ namespace Graphics {
         int rating;
 
         int rate(std::vector<char const*> const& deviceExtensions);
-        std::optional<uint32_t> getGraphicsQueueFamilyIndex();
-        std::optional<uint32_t> getPresentQueueFamilyIndex();
+        std::optional<uint32_t> findGraphicsQueueFamilyIndex();
+        std::optional<uint32_t> findPresentQueueFamilyIndex();
+        static vk::DeviceQueueCreateInfo generateDeviceQueueCreateInfo(uint32_t index, float* queuePriorities);
     };
 }
 

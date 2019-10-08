@@ -19,6 +19,7 @@ namespace Graphics {
         createInstance();
         surface = window.createSurface(instance);
         choosePhysicalDevice();
+        createLogicalDevice();
     }
 
     Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -51,11 +52,35 @@ namespace Graphics {
         Logger::assertNotEmpty(vulkanPhysicalDevices, "No physical devices found.");
 
         physicalDevices.reserve(vulkanPhysicalDevices.size());
-        for (auto device : vulkanPhysicalDevices) {
+        for (auto& device : vulkanPhysicalDevices) {
             physicalDevices.emplace_back(device, surface, deviceExtensions);
         }
 
         auto best = std::max_element(begin(physicalDevices), end(physicalDevices));
-        Logger::assertTrue(best != end(physicalDevices), "No suitable GPU found.");
+        Logger::assertTrue(best != end(physicalDevices) && best->isUsable(), "No suitable GPU found.");
+
+        physicalDevice = &(*best);
+    }
+
+    void Renderer::createLogicalDevice() {
+        float queuePriority = 1.0f;
+        auto queueCreateInfos = physicalDevice->getDeviceQueueCreateInfos(&queuePriority);
+
+        vk::PhysicalDeviceFeatures deviceFeatures{};
+        // deviceFeatures.whatever = true; // Get rid of this comment once there is one to use as an example.
+
+        vk::DeviceCreateInfo deviceCreateInfo{
+            vk::DeviceCreateFlags(),
+            static_cast<uint32_t>(queueCreateInfos.size()),
+            queueCreateInfos.data(),
+            static_cast<uint32_t>(validationLayers.size()),
+            validationLayers.empty() ? nullptr : validationLayers.data(),
+            static_cast<uint32_t>(deviceExtensions.size()),
+            deviceExtensions.data(),
+            &deviceFeatures
+        };
+
+        logicalDevice = physicalDevice->createLogicalDevice(deviceCreateInfo);
+
     }
 }

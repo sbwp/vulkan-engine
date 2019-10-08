@@ -15,7 +15,7 @@
 #include "physical-device.hpp"
 
 namespace Graphics {
-class Renderer: public Util::Runnable {
+    class Renderer: public Util::Runnable {
     public:
         explicit Renderer(Core::Game& game);
         ~Renderer() override;
@@ -27,20 +27,22 @@ class Renderer: public Util::Runnable {
             VK_KHR_SURFACE_EXTENSION_NAME
         };
         const std::vector<const char*> deviceExtensions {
-                VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
         std::vector<const char*> validationLayers {};
         glfw::Window window;
         vk::Instance instance;
         vk::SurfaceKHR surface;
         std::vector<PhysicalDevice> physicalDevices;
-        PhysicalDevice* physicalDevice;
+        PhysicalDevice* physicalDevice = nullptr;
+        vk::Device logicalDevice;
 
         void run() override;
         bool shouldContinue() override;
 
         void createInstance();
         void choosePhysicalDevice();
+        void createLogicalDevice();
     };
 }
 

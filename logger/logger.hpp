@@ -7,6 +7,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <optional>
 
 namespace Logger {
     class error : public std::runtime_error {
@@ -27,6 +28,14 @@ namespace Logger {
         if (collection.empty()) {
             throw error(errorMessage);
         }
+    }
+
+    template <typename T>
+    T unwrap(std::optional<T> opt, std::string const& errorMessage) {
+        if (!opt.has_value()) {
+            throw error(errorMessage);
+        }
+        return *opt;
     }
 
     template<typename T>
