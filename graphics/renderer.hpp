@@ -12,6 +12,7 @@
 #include "../glfw/window.hpp"
 #include "../core/game.hpp"
 #include "../util/runnable.hpp"
+#include "physical-device.hpp"
 
 namespace Graphics {
 class Renderer: public Util::Runnable {
@@ -32,7 +33,8 @@ class Renderer: public Util::Runnable {
         glfw::Window window;
         vk::Instance instance;
         vk::SurfaceKHR surface;
-        vk::PhysicalDevice physicalDevice;
+        std::vector<PhysicalDevice> physicalDevices;
+        PhysicalDevice* physicalDevice;
 
         void run() override;
         bool shouldContinue() override;

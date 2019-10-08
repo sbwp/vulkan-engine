@@ -18,17 +18,9 @@ namespace Logger {
      * since implementation is simple. If implementation becomes complex, make one call
      * the other if appropriate.
      */
-    void assertTrue(bool condition, std::string const& errorMessage) {
-        if (!condition) {
-            throw error(errorMessage);
-        }
-    }
+    void assertTrue(bool condition, std::string const& errorMessage);
 
-    void assertFalse(bool condition, std::string const& errorMessage) {
-        if (condition) {
-            throw error(errorMessage);
-        }
-    }
+    void assertFalse(bool condition, std::string const& errorMessage);
 
     template <typename T>
     void assertNotEmpty(T collection, std::string const& errorMessage) {

@@ -6,14 +6,14 @@
 // #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 // #include <glm/vec4.hpp>
 // #include <glm/mat4x4.hpp>
+#include <algorithm>
 
 #include "renderer.hpp"
 #include "../logger/logger.hpp"
 #include "validation.hpp"
 
 namespace Graphics {
-    Renderer::Renderer(Core::Game& game): game(game) {
-        window = glfw::Window(1820, 980, "Vulkan Engine");
+    Renderer::Renderer(Core::Game& game):  game(game), window(1820, 980, "Vulkan Engine") {
         glfw::appendRequiredExtensions(instanceExtensions);
         setupValidationLayers(instanceExtensions, validationLayers);
         createInstance();
@@ -47,11 +47,15 @@ namespace Graphics {
     }
 
     void Renderer::choosePhysicalDevice() {
-        auto devices = instance.enumeratePhysicalDevices();
-        Logger::assertNotEmpty(devices, "No physical devices found.");
-        for (auto device : devices) {
-            auto queueFamilies = device.getQueueFamilyProperties();
-            Logger::assertNotEmpty(queueFamilies, "No Queue families found.");
+        auto vulkanPhysicalDevices = instance.enumeratePhysicalDevices();
+        Logger::assertNotEmpty(vulkanPhysicalDevices, "No physical devices found.");
+
+        physicalDevices.reserve(vulkanPhysicalDevices.size());
+        for (auto device : vulkanPhysicalDevices) {
+            physicalDevices.emplace_back(device, surface, deviceExtensions);
         }
+
+        auto best = std::max_element(begin(physicalDevices), end(physicalDevices));
+        Logger::assertTrue(best != end(physicalDevices), "No suitable GPU found.");
     }
 }
