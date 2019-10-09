@@ -103,4 +103,12 @@ namespace Graphics {
     bool PhysicalDevice::isUsable() {
         return rating > 0;
     }
+
+    uint32_t PhysicalDevice::graphicsIndex() {
+        return Logger::unwrap(graphicsQueueFamilyIndex, "Device does not have graphics queue.");
+    }
+
+    uint32_t PhysicalDevice::presentIndex() {
+        return Logger::unwrap(presentQueueFamilyIndex, "Device does not have present queue.");
+    }
 }

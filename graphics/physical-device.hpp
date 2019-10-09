@@ -17,6 +17,8 @@ namespace Graphics {
         std::vector<vk::DeviceQueueCreateInfo> getDeviceQueueCreateInfos(float* queuePriorities);
         vk::Device createLogicalDevice(vk::DeviceCreateInfo const& createInfo);
         bool isUsable();
+        uint32_t graphicsIndex();
+        uint32_t presentIndex();
     private:
         vk::PhysicalDevice device;
         vk::SurfaceKHR& surface;

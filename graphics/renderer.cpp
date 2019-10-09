@@ -81,6 +81,7 @@ namespace Graphics {
         };
 
         logicalDevice = physicalDevice->createLogicalDevice(deviceCreateInfo);
-
+        graphicsQueue = logicalDevice.getQueue(physicalDevice->graphicsIndex(), 0);
+        presentQueue = logicalDevice.getQueue(physicalDevice->presentIndex(), 0);
     }
 }

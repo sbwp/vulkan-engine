@@ -36,6 +36,8 @@ namespace Graphics {
         std::vector<PhysicalDevice> physicalDevices;
         PhysicalDevice* physicalDevice = nullptr;
         vk::Device logicalDevice;
+        vk::Queue graphicsQueue;
+        vk::Queue presentQueue;
 
         void run() override;
         bool shouldContinue() override;
