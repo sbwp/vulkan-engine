@@ -20,6 +20,9 @@ namespace Graphics {
         surface = window.createSurface(instance);
         choosePhysicalDevice();
         createLogicalDevice();
+        createSynchronization();
+        createCommandPool();
+        createCommandBuffers();
     }
 
     Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -69,7 +72,7 @@ namespace Graphics {
         vk::PhysicalDeviceFeatures deviceFeatures{};
         // deviceFeatures.whatever = true; // Get rid of this comment once there is one to use as an example.
 
-        vk::DeviceCreateInfo deviceCreateInfo{
+        logicalDevice = physicalDevice->createLogicalDevice({
             vk::DeviceCreateFlags(),
             static_cast<uint32_t>(queueCreateInfos.size()),
             queueCreateInfos.data(),
@@ -78,10 +81,35 @@ namespace Graphics {
             static_cast<uint32_t>(deviceExtensions.size()),
             deviceExtensions.data(),
             &deviceFeatures
-        };
-
-        logicalDevice = physicalDevice->createLogicalDevice(deviceCreateInfo);
+        });
         graphicsQueue = logicalDevice.getQueue(physicalDevice->graphicsIndex(), 0);
         presentQueue = logicalDevice.getQueue(physicalDevice->presentIndex(), 0);
+    }
+
+    void Renderer::createSynchronization() {
+        vk::SemaphoreCreateInfo semaphoreCreateInfo{};
+        vk::FenceCreateInfo fenceCreateInfo{};
+        semaphores.reserve(maxFrames);
+        commandBufferFences.reserve(maxFrames);
+        for (int i = 0; i < maxFrames; ++i) {
+            semaphores.push_back(logicalDevice.createSemaphore(semaphoreCreateInfo));
+            commandBufferFences.push_back(logicalDevice.createFence(fenceCreateInfo));
+        }
+    }
+
+    void Renderer::createCommandPool() {
+        commandPool = logicalDevice.createCommandPool( {
+            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            physicalDevice->graphicsIndex()
+        });
+
+    }
+
+    void Renderer::createCommandBuffers() {
+        commandBuffers = logicalDevice.allocateCommandBuffers({
+            commandPool,
+            vk::CommandBufferLevel::ePrimary,
+            maxFrames
+        });
     }
 }

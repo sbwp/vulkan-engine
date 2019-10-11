@@ -21,6 +21,7 @@ namespace Graphics {
         ~Renderer() override;
 
     private:
+        static int const maxFrames = 2;
         Core::Game& game;
 
         std::vector<const char*> instanceExtensions {
@@ -38,6 +39,10 @@ namespace Graphics {
         vk::Device logicalDevice;
         vk::Queue graphicsQueue;
         vk::Queue presentQueue;
+        std::vector<vk::Semaphore> semaphores;
+        std::vector<vk::Fence> commandBufferFences;
+        vk::CommandPool commandPool;
+        std::vector<vk::CommandBuffer> commandBuffers;
 
         void run() override;
         bool shouldContinue() override;
@@ -45,6 +50,9 @@ namespace Graphics {
         void createInstance();
         void choosePhysicalDevice();
         void createLogicalDevice();
+        void createSynchronization();
+        void createCommandPool();
+        void createCommandBuffers();
     };
 }
 
