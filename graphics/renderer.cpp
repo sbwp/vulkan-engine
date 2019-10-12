@@ -11,15 +11,16 @@
 #include "renderer.hpp"
 #include "../logger/logger.hpp"
 #include "validation.hpp"
+#include "../util/algorithm.hpp"
 
 namespace Graphics {
-    Renderer::Renderer(Core::Game& game):  game(game), window(1820, 980, "Vulkan Engine") {
+    Renderer::Renderer(Core::Game &game) : game(game), window(1820, 980, "Vulkan Engine"),
+                                           presentMode(vk::PresentModeKHR::eFifo) {
         glfw::appendRequiredExtensions(instanceExtensions);
         setupValidationLayers(instanceExtensions, validationLayers);
         createInstance();
         surface = window.createSurface(instance);
         choosePhysicalDevice();
-        createLogicalDevice();
         createSynchronization();
         createCommandPool();
         createCommandBuffers();
@@ -38,7 +39,7 @@ namespace Graphics {
 
     void Renderer::createInstance() {
         auto appInfo = game.makeAppInfo();
-        vk::InstanceCreateInfo createInfo {
+        vk::InstanceCreateInfo createInfo{
                 vk::InstanceCreateFlags(),
                 &appInfo,
                 static_cast<uint32_t>(validationLayers.size()),
@@ -56,36 +57,17 @@ namespace Graphics {
         Logger::assertNotEmpty(vulkanPhysicalDevices, "No physical devices found.");
 
         physicalDevices.reserve(vulkanPhysicalDevices.size());
-        for (auto& device : vulkanPhysicalDevices) {
-            physicalDevices.emplace_back(device, surface, deviceExtensions);
+        for (auto &device : vulkanPhysicalDevices) {
+            physicalDevices.emplace_back(device, surface, deviceExtensions, validationLayers);
         }
 
         auto best = std::max_element(begin(physicalDevices), end(physicalDevices));
         Logger::assertTrue(best != end(physicalDevices) && best->isUsable(), "No suitable GPU found.");
 
-        physicalDevice = &(*best);
+        device = &(*best);
     }
 
-    void Renderer::createLogicalDevice() {
-        float queuePriority = 1.0f;
-        auto queueCreateInfos = physicalDevice->getDeviceQueueCreateInfos(&queuePriority);
 
-        vk::PhysicalDeviceFeatures deviceFeatures{};
-        // deviceFeatures.whatever = true; // Get rid of this comment once there is one to use as an example.
-
-        logicalDevice = physicalDevice->createLogicalDevice({
-            vk::DeviceCreateFlags(),
-            static_cast<uint32_t>(queueCreateInfos.size()),
-            queueCreateInfos.data(),
-            static_cast<uint32_t>(validationLayers.size()),
-            validationLayers.empty() ? nullptr : validationLayers.data(),
-            static_cast<uint32_t>(deviceExtensions.size()),
-            deviceExtensions.data(),
-            &deviceFeatures
-        });
-        graphicsQueue = logicalDevice.getQueue(physicalDevice->graphicsIndex(), 0);
-        presentQueue = logicalDevice.getQueue(physicalDevice->presentIndex(), 0);
-    }
 
     void Renderer::createSynchronization() {
         vk::SemaphoreCreateInfo semaphoreCreateInfo{};
@@ -93,21 +75,21 @@ namespace Graphics {
         semaphores.reserve(maxFrames);
         commandBufferFences.reserve(maxFrames);
         for (int i = 0; i < maxFrames; ++i) {
-            semaphores.push_back(logicalDevice.createSemaphore(semaphoreCreateInfo));
-            commandBufferFences.push_back(logicalDevice.createFence(fenceCreateInfo));
+            semaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
+            commandBufferFences.push_back(device->createFence(fenceCreateInfo));
         }
     }
 
     void Renderer::createCommandPool() {
-        commandPool = logicalDevice.createCommandPool( {
+        commandPool = device->createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            physicalDevice->graphicsIndex()
+            device->graphicsIndex()
         });
 
     }
 
     void Renderer::createCommandBuffers() {
-        commandBuffers = logicalDevice.allocateCommandBuffers({
+        commandBuffers = device->allocateCommandBuffers({
             commandPool,
             vk::CommandBufferLevel::ePrimary,
             maxFrames
@@ -115,44 +97,98 @@ namespace Graphics {
     }
 
     void Renderer::createSwapchain() {
-        surfaceFormat = chooseSurfaceFormat(physicalDevice->surfaceFormats);
-        presentMode = choosePresentMode(physicalDevice->presentModes);
-        extent = chooseExtent(physicalDevice->surfaceCapabilities);
+        surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
+        presentMode = choosePresentMode(device->presentModes);
+        extent = chooseExtent(device->surfaceCapabilities);
 
-        uint32_t indices[] = { physicalDevice->graphicsIndex(), physicalDevice->presentIndex() };
+        uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
         bool queuesSame = indices[0] == indices[1];
 
-        swapchain = logicalDevice.createSwapchainKHR({
-            vk::SwapchainCreateFlagsKHR(),
-            surface,
-            maxFrames,
-            surfaceFormat.format,
-            surfaceFormat.colorSpace,
-            extent,
-            1u,
-            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
-            queuesSame ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
-            queuesSame ? 1u : 2u,
-            indices,
-            vk::SurfaceTransformFlagBitsKHR ::eIdentity,
-            vk::CompositeAlphaFlagBitsKHR::eOpaque,
-            presentMode
-        });
+        swapchain = device->createSwapchain({
+                                                             vk::SwapchainCreateFlagsKHR(),
+                                                             surface,
+                                                             maxFrames,
+                                                             surfaceFormat.format,
+                                                             surfaceFormat.colorSpace,
+                                                             extent,
+                                                             1u,
+                                                             vk::ImageUsageFlagBits::eColorAttachment |
+                                                             vk::ImageUsageFlagBits::eTransferSrc,
+                                                             queuesSame ? vk::SharingMode::eExclusive
+                                                                        : vk::SharingMode::eConcurrent,
+                                                             queuesSame ? 1u : 2u,
+                                                             indices,
+                                                             vk::SurfaceTransformFlagBitsKHR::eIdentity,
+                                                             vk::CompositeAlphaFlagBitsKHR::eOpaque,
+                                                             presentMode
+                                                     });
 
-        std::vector<vk::Image> swapchainImages = logicalDevice.getSwapchainImagesKHR(swapchain);
+        std::vector<vk::Image> swapchainImages = device->getSwapchainImages(swapchain);
 
-        // TODO: Continue with ImageViews
+        std::vector<vk::ImageView> swapchainImageViews{};
+        swapchainImageViews.reserve(swapchainImages.size());
+
+        for (auto &image : swapchainImages) {
+            device->createImageView({
+                                                  vk::ImageViewCreateFlags(),
+                                                  image,
+                                                  vk::ImageViewType::e2D,
+                                                  surfaceFormat.format,
+                                                  vk::ComponentMapping{
+                                                          vk::ComponentSwizzle::eR,
+                                                          vk::ComponentSwizzle::eG,
+                                                          vk::ComponentSwizzle::eB,
+                                                          vk::ComponentSwizzle::eA
+                                                  },
+                                                  vk::ImageSubresourceRange{
+                                                          vk::ImageAspectFlagBits::eColor,
+                                                          0u,
+                                                          1u,
+                                                          0u,
+                                                          1u
+                                                  }
+                                          });
+        }
+
     }
 
-    vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
-        return vk::SurfaceFormatKHR{}; // TODO
+    vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR> &supportedFormats) {
+        if (supportedFormats.size() == 1 && supportedFormats[0].format == vk::Format::eUndefined) {
+            return {
+                    vk::Format::eB8G8R8A8Unorm,
+                    vk::ColorSpaceKHR::eSrgbNonlinear
+            };
+        }
+
+        for (const auto &format : supportedFormats) {
+            if (format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+                return format;
+            }
+        }
+
+        return supportedFormats[0];
     }
 
-    vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes) {
+    vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR> &supportedModes) {
+        for (const auto &mode : supportedModes) {
+            if (mode == vk::PresentModeKHR::eMailbox) {
+                return mode;
+            }
+        }
+
         return vk::PresentModeKHR::eFifo;
     }
 
-    vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
-        return vk::Extent2D();
+    vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR &capabilities) {
+        if (capabilities.currentExtent.width != UINT32_MAX) {
+            return capabilities.currentExtent;
+        }
+
+        auto windowExtent = window.getFramebufferSize();
+        windowExtent.width = Util::clamp(windowExtent.width, capabilities.minImageExtent.width,
+                                         capabilities.maxImageExtent.width);
+        windowExtent.height = Util::clamp(windowExtent.height, capabilities.minImageExtent.height,
+                                          capabilities.maxImageExtent.height);
+        return windowExtent;
     }
 }

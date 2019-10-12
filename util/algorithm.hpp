@@ -23,6 +23,11 @@ namespace Util {
     bool containsWhere(Collection collection, std::function<bool(ValueType)> const& lambda) {
         return std::find_if(begin(collection), end(collection), lambda) != end(collection);
     }
+
+    template <typename T>
+    T const& clamp(T const& value, T const& min, T const& max) {
+        return std::max(min, std::min(max, value));
+    }
 }
 
 #endif //VULKAN_ENGINE_ALGORITHM_HPP

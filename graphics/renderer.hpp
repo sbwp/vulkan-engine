@@ -12,7 +12,7 @@
 #include "../glfw/window.hpp"
 #include "../core/game.hpp"
 #include "../util/runnable.hpp"
-#include "physical-device.hpp"
+#include "device.hpp"
 
 namespace Graphics {
     class Renderer: public Util::Runnable {
@@ -35,12 +35,8 @@ namespace Graphics {
         vk::Instance instance;
         vk::SurfaceKHR surface;
 
-        std::vector<PhysicalDevice> physicalDevices;
-        PhysicalDevice* physicalDevice = nullptr;
-        vk::Device logicalDevice;
-
-        vk::Queue graphicsQueue;
-        vk::Queue presentQueue;
+        std::vector<Device> physicalDevices;
+        Device* device = nullptr;
 
         std::vector<vk::Semaphore> semaphores;
         std::vector<vk::Fence> commandBufferFences;
@@ -48,7 +44,7 @@ namespace Graphics {
         vk::CommandPool commandPool;
         std::vector<vk::CommandBuffer> commandBuffers;
 
-        vk::SurfaceFormatKHR surfaceFormat;
+        vk::SurfaceFormatKHR surfaceFormat{};
         vk::PresentModeKHR presentMode;
         vk::Extent2D extent;
         vk::SwapchainKHR swapchain;
@@ -58,15 +54,14 @@ namespace Graphics {
 
         void createInstance();
         void choosePhysicalDevice();
-        void createLogicalDevice();
         void createSynchronization();
         void createCommandPool();
         void createCommandBuffers();
         void createSwapchain();
 
-        vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
+        static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
 
-        vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
+        static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
 
         vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
     };

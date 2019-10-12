@@ -18,6 +18,7 @@ namespace glfw{
         ~Window();
         bool shouldClose();
         vk::SurfaceKHR createSurface(vk::Instance& instance);
+        vk::Extent2D getFramebufferSize();
     private:
         GLFWwindow* window;
     };

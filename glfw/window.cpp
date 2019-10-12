@@ -29,6 +29,15 @@ namespace glfw{
         return vk::SurfaceKHR(c_surface);
     }
 
+    vk::Extent2D Window::getFramebufferSize() {
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        return {
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height)
+        };
+    }
+
     void appendRequiredExtensions(std::vector<const char *> &instanceExtensions) {
         uint32_t glfwRequiredExtensionsCount;
         auto glfwRequiredExtensions = glfwGetRequiredInstanceExtensions(&glfwRequiredExtensionsCount);
