@@ -13,6 +13,10 @@ namespace Graphics {
     public:
         PhysicalDevice(vk::PhysicalDevice device, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
 
+        std::vector<vk::SurfaceFormatKHR> surfaceFormats;
+        std::vector<vk::PresentModeKHR> presentModes;
+        vk::SurfaceCapabilitiesKHR surfaceCapabilities;
+
         bool operator<(PhysicalDevice& other);
         std::vector<vk::DeviceQueueCreateInfo> getDeviceQueueCreateInfos(float* queuePriorities);
         vk::Device createLogicalDevice(vk::DeviceCreateInfo const& createInfo);
@@ -25,10 +29,7 @@ namespace Graphics {
 
         std::vector<vk::QueueFamilyProperties> queueFamilies;
         std::vector<vk::ExtensionProperties> extensionProperties;
-        std::vector<vk::SurfaceFormatKHR> surfaceFormats;
-        std::vector<vk::PresentModeKHR> presentModes;
 
-        vk::SurfaceCapabilitiesKHR surfaceCapabilities;
         vk::PhysicalDeviceMemoryProperties memoryProperties;
         vk::PhysicalDeviceProperties properties;
 

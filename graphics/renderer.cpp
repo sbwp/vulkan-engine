@@ -23,6 +23,7 @@ namespace Graphics {
         createSynchronization();
         createCommandPool();
         createCommandBuffers();
+        createSwapchain();
     }
 
     Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -111,5 +112,47 @@ namespace Graphics {
             vk::CommandBufferLevel::ePrimary,
             maxFrames
         });
+    }
+
+    void Renderer::createSwapchain() {
+        surfaceFormat = chooseSurfaceFormat(physicalDevice->surfaceFormats);
+        presentMode = choosePresentMode(physicalDevice->presentModes);
+        extent = chooseExtent(physicalDevice->surfaceCapabilities);
+
+        uint32_t indices[] = { physicalDevice->graphicsIndex(), physicalDevice->presentIndex() };
+        bool queuesSame = indices[0] == indices[1];
+
+        swapchain = logicalDevice.createSwapchainKHR({
+            vk::SwapchainCreateFlagsKHR(),
+            surface,
+            maxFrames,
+            surfaceFormat.format,
+            surfaceFormat.colorSpace,
+            extent,
+            1u,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
+            queuesSame ? vk::SharingMode::eExclusive : vk::SharingMode::eConcurrent,
+            queuesSame ? 1u : 2u,
+            indices,
+            vk::SurfaceTransformFlagBitsKHR ::eIdentity,
+            vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            presentMode
+        });
+
+        std::vector<vk::Image> swapchainImages = logicalDevice.getSwapchainImagesKHR(swapchain);
+
+        // TODO: Continue with ImageViews
+    }
+
+    vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
+        return vk::SurfaceFormatKHR{}; // TODO
+    }
+
+    vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes) {
+        return vk::PresentModeKHR::eFifo;
+    }
+
+    vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
+        return vk::Extent2D();
     }
 }

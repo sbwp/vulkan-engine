@@ -34,15 +34,24 @@ namespace Graphics {
         glfw::Window window;
         vk::Instance instance;
         vk::SurfaceKHR surface;
+
         std::vector<PhysicalDevice> physicalDevices;
         PhysicalDevice* physicalDevice = nullptr;
         vk::Device logicalDevice;
+
         vk::Queue graphicsQueue;
         vk::Queue presentQueue;
+
         std::vector<vk::Semaphore> semaphores;
         std::vector<vk::Fence> commandBufferFences;
+
         vk::CommandPool commandPool;
         std::vector<vk::CommandBuffer> commandBuffers;
+
+        vk::SurfaceFormatKHR surfaceFormat;
+        vk::PresentModeKHR presentMode;
+        vk::Extent2D extent;
+        vk::SwapchainKHR swapchain;
 
         void run() override;
         bool shouldContinue() override;
@@ -53,6 +62,13 @@ namespace Graphics {
         void createSynchronization();
         void createCommandPool();
         void createCommandBuffers();
+        void createSwapchain();
+
+        vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
+
+        vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
+
+        vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
     };
 }
 
