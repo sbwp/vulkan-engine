@@ -25,6 +25,8 @@ namespace Graphics {
         createCommandPool();
         createCommandBuffers();
         createSwapchain();
+        createRenderTargets();
+        createRenderPass();
     }
 
     Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -190,5 +192,88 @@ namespace Graphics {
         windowExtent.height = Util::clamp(windowExtent.height, capabilities.minImageExtent.height,
                                           capabilities.maxImageExtent.height);
         return windowExtent;
+    }
+
+    void Renderer::createRenderTargets() {
+        std::vector<vk::Format> formats {
+                vk::Format::eD32SfloatS8Uint,
+                vk::Format::eD24UnormS8Uint
+        };
+
+        depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
+                vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    }
+
+    vk::Format Renderer::chooseSupportedFormat(std::vector<vk::Format> formats, vk::ImageTiling tiling,
+                                               vk::FormatFeatureFlags features) {
+        for (const auto& format : formats) {
+            auto supportedFeatures = device->getFormatFeaturesForTiling(format, tiling);
+            if ((supportedFeatures & features) == features) {
+                return format;
+            }
+        }
+
+        throw Logger::error{"No supported format found."};
+    }
+
+    void Renderer::createRenderPass() {
+        std::vector<vk::AttachmentDescription> attachments;
+
+        // Color Attachment
+        attachments.emplace_back(
+            vk::AttachmentDescriptionFlags(),
+            surfaceFormat.format,
+            vk::SampleCountFlagBits::e1,
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eStore,
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::ePresentSrcKHR
+        );
+
+        // Depth Attachment
+        attachments.emplace_back(
+                vk::AttachmentDescriptionFlags(),
+                depthFormat,
+                vk::SampleCountFlagBits::e1,
+                vk::AttachmentLoadOp::eDontCare,
+                vk::AttachmentStoreOp::eDontCare,
+                vk::AttachmentLoadOp::eLoad,
+                vk::AttachmentStoreOp::eStore,
+                vk::ImageLayout::eUndefined,
+                vk::ImageLayout::eDepthStencilAttachmentOptimal
+        );
+
+        vk::AttachmentReference colorReference{
+            0u,
+            vk::ImageLayout::eColorAttachmentOptimal
+        };
+
+        vk::AttachmentReference depthReference{
+                1u,
+                vk::ImageLayout::eDepthStencilAttachmentOptimal
+        };
+
+        vk::SubpassDescription subpassDescription {
+            vk::SubpassDescriptionFlags(),
+            vk::PipelineBindPoint::eGraphics,
+            0u,
+            nullptr,
+            1u,
+            &colorReference,
+            nullptr,
+            &depthReference
+        };
+
+        renderPass = device->createRenderPass({
+            vk::RenderPassCreateFlags(),
+            static_cast<uint32_t>(attachments.size()),
+            attachments.data(),
+            1u,
+            &subpassDescription,
+            0u,
+            nullptr
+        });
     }
 }

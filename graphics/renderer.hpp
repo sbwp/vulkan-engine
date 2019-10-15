@@ -48,6 +48,12 @@ namespace Graphics {
         vk::PresentModeKHR presentMode;
         vk::Extent2D extent;
         vk::SwapchainKHR swapchain;
+        vk::Format depthFormat;
+        vk::RenderPass renderPass;
+
+
+        static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
+        static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
 
         void run() override;
         bool shouldContinue() override;
@@ -58,12 +64,12 @@ namespace Graphics {
         void createCommandPool();
         void createCommandBuffers();
         void createSwapchain();
-
-        static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
-
-        static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
+        void createRenderTargets();
+        void createRenderPass();
 
         vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
+        vk::Format chooseSupportedFormat(std::vector<vk::Format> formats, vk::ImageTiling tiling,
+                vk::FormatFeatureFlags features);
     };
 }
 

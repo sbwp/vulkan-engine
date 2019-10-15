@@ -31,13 +31,17 @@ namespace Graphics {
         vk::Queue graphicsQueue;
         vk::Queue presentQueue;
 
-        vk::Semaphore createSemaphore(vk::SemaphoreCreateInfo info);
-        vk::Fence createFence(vk::FenceCreateInfo info);
-        vk::CommandPool createCommandPool(vk::CommandPoolCreateInfo info);
-        std::vector<vk::CommandBuffer> allocateCommandBuffers(vk::CommandBufferAllocateInfo info);
-        vk::SwapchainKHR createSwapchain(vk::SwapchainCreateInfoKHR info);
-        std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR swapchain);
-        vk::ImageView createImageView(vk::ImageViewCreateInfo info);
+        vk::Semaphore createSemaphore(vk::SemaphoreCreateInfo const& info);
+        vk::Fence createFence(vk::FenceCreateInfo const& info);
+        vk::CommandPool createCommandPool(vk::CommandPoolCreateInfo const& info);
+        std::vector<vk::CommandBuffer> allocateCommandBuffers(vk::CommandBufferAllocateInfo const& info);
+        vk::SwapchainKHR createSwapchain(vk::SwapchainCreateInfoKHR const& info);
+        std::vector<vk::Image> getSwapchainImages(vk::SwapchainKHR const& swapchain);
+        vk::ImageView createImageView(vk::ImageViewCreateInfo const& info);
+        vk::RenderPass createRenderPass(vk::RenderPassCreateInfo const& info);
+
+        vk::FormatProperties getFormatProperties(vk::Format const& format);
+        vk::FormatFeatureFlags getFormatFeaturesForTiling (vk::Format const& format, vk::ImageTiling const& tiling);
 
     private:
         vk::PhysicalDevice physicalDevice;
@@ -55,16 +59,16 @@ namespace Graphics {
 
         int rating;
 
-        int rate(std::vector<char const *> const &deviceExtensions);
+        int rate(std::vector<char const *> const& deviceExtensions);
 
         std::optional<uint32_t> findGraphicsQueueFamilyIndex();
 
         std::optional<uint32_t> findPresentQueueFamilyIndex();
 
-        static vk::DeviceQueueCreateInfo generateDeviceQueueCreateInfo(uint32_t index, float *queuePriorities);
+        static vk::DeviceQueueCreateInfo generateDeviceQueueCreateInfo(uint32_t index, float* queuePriorities);
 
-        void createLogicalDevice(std::vector<char const *> const &deviceExtensions,
-                                 std::vector<char const *> const &validationLayers);
+        void createLogicalDevice(std::vector<char const *> const& deviceExtensions,
+                                 std::vector<char const *> const& validationLayers);
     };
 }
 

@@ -137,31 +137,50 @@ namespace Graphics {
         return Logger::unwrap(presentQueueFamilyIndex, "Device does not have present queue.");
     }
 
-    vk::Semaphore Device::createSemaphore(vk::SemaphoreCreateInfo info) {
+    vk::Semaphore Device::createSemaphore(vk::SemaphoreCreateInfo const& info) {
         return logicalDevice.createSemaphore(info);
     }
 
-    vk::Fence Device::createFence(vk::FenceCreateInfo info) {
+    vk::Fence Device::createFence(vk::FenceCreateInfo const& info) {
         return logicalDevice.createFence(info);
     }
 
-    vk::CommandPool Device::createCommandPool(vk::CommandPoolCreateInfo info) {
+    vk::CommandPool Device::createCommandPool(vk::CommandPoolCreateInfo const& info) {
         return logicalDevice.createCommandPool(info);
     }
 
-    std::vector<vk::CommandBuffer> Device::allocateCommandBuffers(vk::CommandBufferAllocateInfo info) {
+    std::vector<vk::CommandBuffer> Device::allocateCommandBuffers(vk::CommandBufferAllocateInfo const& info) {
         return logicalDevice.allocateCommandBuffers(info);
     }
 
-    vk::SwapchainKHR Device::createSwapchain(vk::SwapchainCreateInfoKHR info) {
+    vk::SwapchainKHR Device::createSwapchain(vk::SwapchainCreateInfoKHR const& info) {
         return logicalDevice.createSwapchainKHR(info);
     }
 
-    std::vector<vk::Image> Device::getSwapchainImages(vk::SwapchainKHR swapchain) {
+    std::vector<vk::Image> Device::getSwapchainImages(vk::SwapchainKHR const& swapchain) {
         return logicalDevice.getSwapchainImagesKHR(swapchain);
     }
 
-    vk::ImageView Device::createImageView(vk::ImageViewCreateInfo info) {
+    vk::ImageView Device::createImageView(vk::ImageViewCreateInfo const& info) {
         return logicalDevice.createImageView(info);
+    }
+
+    vk::FormatProperties Device::getFormatProperties(vk::Format const& format) {
+        return physicalDevice.getFormatProperties(format);
+    }
+
+    vk::FormatFeatureFlags Device::getFormatFeaturesForTiling (vk::Format const& format, vk::ImageTiling const& tiling) {
+        auto formatProperties = getFormatProperties(format);
+        if (tiling == vk::ImageTiling::eLinear) {
+            return formatProperties.linearTilingFeatures;
+        }
+        if (tiling == vk::ImageTiling::eOptimal) {
+            return formatProperties.optimalTilingFeatures;
+        }
+        return vk::FormatFeatureFlags();
+    }
+
+    vk::RenderPass Device::createRenderPass(vk::RenderPassCreateInfo const& info) {
+        return logicalDevice.createRenderPass(info);
     }
 }
