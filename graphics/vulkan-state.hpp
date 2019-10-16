@@ -8,10 +8,9 @@
 #include <vulkan/vulkan.hpp>
 
 namespace Graphics {
-    struct VulkanState {
-        vk::Instance instance;
-    };
+	struct VulkanState {
+		vk::Instance instance;
+	};
 }
-
 
 #endif //VULKAN_ENGINE_VULKAN_STATE_HPP

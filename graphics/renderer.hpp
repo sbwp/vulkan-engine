@@ -13,64 +13,73 @@
 #include "../core/game.hpp"
 #include "../util/runnable.hpp"
 #include "device.hpp"
+#include "image.hpp"
 
 namespace Graphics {
-    class Renderer: public Util::Runnable {
-    public:
-        explicit Renderer(Core::Game& game);
-        ~Renderer() override;
+	class Renderer: public Util::Runnable {
+	public:
+		explicit Renderer(Core::Game& game);
 
-    private:
-        static int const maxFrames = 2;
-        Core::Game& game;
+		~Renderer() override;
 
-        std::vector<const char*> instanceExtensions {
-            VK_KHR_SURFACE_EXTENSION_NAME
-        };
-        const std::vector<const char*> deviceExtensions {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
-        };
-        std::vector<const char*> validationLayers {};
-        glfw::Window window;
-        vk::Instance instance;
-        vk::SurfaceKHR surface;
+	private:
+		static int const maxFrames = 2;
+		Core::Game& game;
 
-        std::vector<Device> physicalDevices;
-        Device* device = nullptr;
+		std::vector<const char*> instanceExtensions{
+			VK_KHR_SURFACE_EXTENSION_NAME
+		};
+		const std::vector<const char*> deviceExtensions{
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
+		std::vector<const char*> validationLayers{};
+		glfw::Window window;
+		vk::Instance instance;
+		vk::SurfaceKHR surface;
 
-        std::vector<vk::Semaphore> semaphores;
-        std::vector<vk::Fence> commandBufferFences;
+		std::vector<Device> devices;
+		Device* device = nullptr;
 
-        vk::CommandPool commandPool;
-        std::vector<vk::CommandBuffer> commandBuffers;
+		std::vector<vk::Semaphore> semaphores;
+		std::vector<vk::Fence> commandBufferFences;
 
-        vk::SurfaceFormatKHR surfaceFormat{};
-        vk::PresentModeKHR presentMode;
-        vk::Extent2D extent;
-        vk::SwapchainKHR swapchain;
-        vk::Format depthFormat;
-        vk::RenderPass renderPass;
+		vk::CommandPool commandPool;
+		std::vector<vk::CommandBuffer> commandBuffers;
 
+		vk::SurfaceFormatKHR surfaceFormat{};
+		vk::PresentModeKHR presentMode;
+		vk::Extent2D extent;
+		vk::SwapchainKHR swapchain;
+		std::vector<Image> images;
+		vk::Format depthFormat;
+		vk::Image depthImage;
+		vk::ImageView depthImageView;
+		vk::RenderPass renderPass;
+		std::vector<vk::Framebuffer> framebuffers;
 
-        static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
-        static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
+		const uint32_t mipLevels = 1u; // TODO acutally implement miplevels
 
-        void run() override;
-        bool shouldContinue() override;
+		static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
+		static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
 
-        void createInstance();
-        void choosePhysicalDevice();
-        void createSynchronization();
-        void createCommandPool();
-        void createCommandBuffers();
-        void createSwapchain();
-        void createRenderTargets();
-        void createRenderPass();
+		void run() override;
+		bool shouldContinue() override;
 
-        vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
-        vk::Format chooseSupportedFormat(std::vector<vk::Format> formats, vk::ImageTiling tiling,
-                vk::FormatFeatureFlags features);
-    };
+		void createInstance();
+		void choosePhysicalDevice();
+		void createSynchronization();
+		void createCommandPool();
+		void createCommandBuffers();
+		void createSwapchain();
+		void createDepthImage();
+		void createRenderPass();
+		void createFramebuffers();
+
+		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
+
+		vk::Format chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
+										 const vk::FormatFeatureFlags& features);
+	};
 }
 
 #endif //VULKAN_ENGINE_RENDERER_HPP

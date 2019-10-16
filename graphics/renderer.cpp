@@ -14,266 +14,276 @@
 #include "../util/algorithm.hpp"
 
 namespace Graphics {
-    Renderer::Renderer(Core::Game &game) : game(game), window(1820, 980, "Vulkan Engine"),
-                                           presentMode(vk::PresentModeKHR::eFifo) {
-        glfw::appendRequiredExtensions(instanceExtensions);
-        setupValidationLayers(instanceExtensions, validationLayers);
-        createInstance();
-        surface = window.createSurface(instance);
-        choosePhysicalDevice();
-        createSynchronization();
-        createCommandPool();
-        createCommandBuffers();
-        createSwapchain();
-        createRenderTargets();
-        createRenderPass();
-    }
+	Renderer::Renderer(Core::Game& game) : game(game), window(1820, 980, "Vulkan Engine"),
+										   presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined) {
+		glfw::appendRequiredExtensions(instanceExtensions);
+		setupValidationLayers(instanceExtensions, validationLayers);
+		createInstance();
+		surface = window.createSurface(instance);
+		choosePhysicalDevice();
+		createSynchronization();
+		createCommandPool();
+		createCommandBuffers();
+		surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
+		presentMode = choosePresentMode(device->presentModes);
+		extent = chooseExtent(device->surfaceCapabilities);
+		createDepthImage();
+		createSwapchain();
+		createRenderPass();
+		createFramebuffers();
+	}
 
-    Renderer::~Renderer() = default; // Remove if nothing ends up going here.
+	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
 
-    void Renderer::run() {
-        glfw::tick();
-    }
+	void Renderer::run() {
+		glfw::tick();
+	}
 
-    bool Renderer::shouldContinue() {
-        return !window.shouldClose();
-    }
+	bool Renderer::shouldContinue() {
+		return !window.shouldClose();
+	}
 
-    void Renderer::createInstance() {
-        auto appInfo = game.makeAppInfo();
-        vk::InstanceCreateInfo createInfo{
-                vk::InstanceCreateFlags(),
-                &appInfo,
-                static_cast<uint32_t>(validationLayers.size()),
-                validationLayers.data(),
-                static_cast<uint32_t>(instanceExtensions.size()),
-                instanceExtensions.data()
-        };
-        instance = vk::createInstance(createInfo);
+	void Renderer::createInstance() {
+		auto appInfo = game.makeAppInfo();
+		vk::InstanceCreateInfo createInfo{
+			vk::InstanceCreateFlags(),
+			&appInfo,
+			static_cast<uint32_t>(validationLayers.size()),
+			validationLayers.data(),
+			static_cast<uint32_t>(instanceExtensions.size()),
+			instanceExtensions.data()
+		};
+		instance = vk::createInstance(createInfo);
 
-        setupValidationCallback();
-    }
+		setupValidationCallback();
+	}
 
-    void Renderer::choosePhysicalDevice() {
-        auto vulkanPhysicalDevices = instance.enumeratePhysicalDevices();
-        Logger::assertNotEmpty(vulkanPhysicalDevices, "No physical devices found.");
+	void Renderer::choosePhysicalDevice() {
+		auto physicalDevices = instance.enumeratePhysicalDevices();
+		Logger::assertNotEmpty(physicalDevices, "No physical devices found.");
 
-        physicalDevices.reserve(vulkanPhysicalDevices.size());
-        for (auto &device : vulkanPhysicalDevices) {
-            physicalDevices.emplace_back(device, surface, deviceExtensions, validationLayers);
-        }
+		devices.reserve(physicalDevices.size());
+		for (auto& physicalDevice : physicalDevices) {
+			devices.emplace_back(physicalDevice, surface, deviceExtensions, validationLayers);
+		}
 
-        auto best = std::max_element(begin(physicalDevices), end(physicalDevices));
-        Logger::assertTrue(best != end(physicalDevices) && best->isUsable(), "No suitable GPU found.");
+		auto best = std::max_element(begin(devices), end(devices));
+		Logger::assertTrue(best != end(devices) && best->isUsable(), "No suitable GPU found.");
 
-        device = &(*best);
-    }
+		device = &(*best);
+	}
 
+	void Renderer::createSynchronization() {
+		vk::SemaphoreCreateInfo semaphoreCreateInfo{};
+		vk::FenceCreateInfo fenceCreateInfo{};
+		semaphores.reserve(maxFrames);
+		commandBufferFences.reserve(maxFrames);
+		for (int i = 0; i < maxFrames; ++i) {
+			semaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
+			commandBufferFences.push_back(device->createFence(fenceCreateInfo));
+		}
+	}
 
+	void Renderer::createCommandPool() {
+		commandPool = device->createCommandPool({
+			vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+			device->graphicsIndex()
+		});
 
-    void Renderer::createSynchronization() {
-        vk::SemaphoreCreateInfo semaphoreCreateInfo{};
-        vk::FenceCreateInfo fenceCreateInfo{};
-        semaphores.reserve(maxFrames);
-        commandBufferFences.reserve(maxFrames);
-        for (int i = 0; i < maxFrames; ++i) {
-            semaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
-            commandBufferFences.push_back(device->createFence(fenceCreateInfo));
-        }
-    }
+	}
 
-    void Renderer::createCommandPool() {
-        commandPool = device->createCommandPool({
-            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            device->graphicsIndex()
-        });
+	void Renderer::createCommandBuffers() {
+		commandBuffers = device->allocateCommandBuffers({
+			commandPool,
+			vk::CommandBufferLevel::ePrimary,
+			maxFrames
+		});
+	}
 
-    }
+	void Renderer::createSwapchain() {
+		uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
+		bool queuesSame = indices[0] == indices[1];
 
-    void Renderer::createCommandBuffers() {
-        commandBuffers = device->allocateCommandBuffers({
-            commandPool,
-            vk::CommandBufferLevel::ePrimary,
-            maxFrames
-        });
-    }
+		swapchain = device->createSwapchain({
+			vk::SwapchainCreateFlagsKHR(),
+			surface,
+			maxFrames,
+			surfaceFormat.format,
+			surfaceFormat.colorSpace,
+			extent,
+			1u,
+			vk::ImageUsageFlagBits::eColorAttachment |
+				vk::ImageUsageFlagBits::eTransferSrc,
+			queuesSame
+			? vk::SharingMode::eExclusive
+			: vk::SharingMode::eConcurrent,
+			queuesSame
+			? 1u
+			: 2u,
+			indices,
+			vk::SurfaceTransformFlagBitsKHR::eIdentity,
+			vk::CompositeAlphaFlagBitsKHR::eOpaque,
+			presentMode
+		});
 
-    void Renderer::createSwapchain() {
-        surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
-        presentMode = choosePresentMode(device->presentModes);
-        extent = chooseExtent(device->surfaceCapabilities);
+		images = device->getSwapchainImages(swapchain, surfaceFormat.format, depthImageView);
+	}
 
-        uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
-        bool queuesSame = indices[0] == indices[1];
+	vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
+		if (supportedFormats.size() == 1 && supportedFormats[0].format == vk::Format::eUndefined) {
+			return {
+				vk::Format::eB8G8R8A8Unorm,
+				vk::ColorSpaceKHR::eSrgbNonlinear
+			};
+		}
 
-        swapchain = device->createSwapchain({
-                                                             vk::SwapchainCreateFlagsKHR(),
-                                                             surface,
-                                                             maxFrames,
-                                                             surfaceFormat.format,
-                                                             surfaceFormat.colorSpace,
-                                                             extent,
-                                                             1u,
-                                                             vk::ImageUsageFlagBits::eColorAttachment |
-                                                             vk::ImageUsageFlagBits::eTransferSrc,
-                                                             queuesSame ? vk::SharingMode::eExclusive
-                                                                        : vk::SharingMode::eConcurrent,
-                                                             queuesSame ? 1u : 2u,
-                                                             indices,
-                                                             vk::SurfaceTransformFlagBitsKHR::eIdentity,
-                                                             vk::CompositeAlphaFlagBitsKHR::eOpaque,
-                                                             presentMode
-                                                     });
+		for (const auto& format : supportedFormats) {
+			if (format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+				return format;
+			}
+		}
 
-        std::vector<vk::Image> swapchainImages = device->getSwapchainImages(swapchain);
+		return supportedFormats[0];
+	}
 
-        std::vector<vk::ImageView> swapchainImageViews{};
-        swapchainImageViews.reserve(swapchainImages.size());
+	vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes) {
+		for (const auto& mode : supportedModes) {
+			if (mode == vk::PresentModeKHR::eMailbox) {
+				return mode;
+			}
+		}
 
-        for (auto &image : swapchainImages) {
-            device->createImageView({
-                                                  vk::ImageViewCreateFlags(),
-                                                  image,
-                                                  vk::ImageViewType::e2D,
-                                                  surfaceFormat.format,
-                                                  vk::ComponentMapping{
-                                                          vk::ComponentSwizzle::eR,
-                                                          vk::ComponentSwizzle::eG,
-                                                          vk::ComponentSwizzle::eB,
-                                                          vk::ComponentSwizzle::eA
-                                                  },
-                                                  vk::ImageSubresourceRange{
-                                                          vk::ImageAspectFlagBits::eColor,
-                                                          0u,
-                                                          1u,
-                                                          0u,
-                                                          1u
-                                                  }
-                                          });
-        }
+		return vk::PresentModeKHR::eFifo;
+	}
 
-    }
+	vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
+		if (capabilities.currentExtent.width != UINT32_MAX) {
+			return capabilities.currentExtent;
+		}
 
-    vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR> &supportedFormats) {
-        if (supportedFormats.size() == 1 && supportedFormats[0].format == vk::Format::eUndefined) {
-            return {
-                    vk::Format::eB8G8R8A8Unorm,
-                    vk::ColorSpaceKHR::eSrgbNonlinear
-            };
-        }
+		auto windowExtent = window.getFramebufferSize();
+		windowExtent.width = Util::clamp(windowExtent.width, capabilities.minImageExtent.width,
+			capabilities.maxImageExtent.width);
+		windowExtent.height = Util::clamp(windowExtent.height, capabilities.minImageExtent.height,
+			capabilities.maxImageExtent.height);
+		return windowExtent;
+	}
 
-        for (const auto &format : supportedFormats) {
-            if (format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-                return format;
-            }
-        }
+	void Renderer::createDepthImage() {
+		std::vector<vk::Format> formats{
+			vk::Format::eD32SfloatS8Uint,
+			vk::Format::eD24UnormS8Uint
+		};
 
-        return supportedFormats[0];
-    }
+		depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
-    vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR> &supportedModes) {
-        for (const auto &mode : supportedModes) {
-            if (mode == vk::PresentModeKHR::eMailbox) {
-                return mode;
-            }
-        }
+		depthImage = device->createImage(depthFormat, extent, vk::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			vk::MemoryPropertyFlagBits::eDeviceLocal, mipLevels);
 
-        return vk::PresentModeKHR::eFifo;
-    }
+		depthImageView = device->createImageView({
+			vk::ImageViewCreateFlags(),
+			depthImage,
+			vk::ImageViewType::e2D,
+			depthFormat,
+			{},
+			{
+				vk::ImageAspectFlagBits::eDepth,
+				0u,
+				mipLevels,
+				0u,
+				1u
+			}
+		});
+	}
 
-    vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR &capabilities) {
-        if (capabilities.currentExtent.width != UINT32_MAX) {
-            return capabilities.currentExtent;
-        }
+	vk::Format Renderer::chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
+											   const vk::FormatFeatureFlags& features) {
+		for (const auto& format : formats) {
+			auto supportedFeatures = device->getFormatFeaturesForTiling(format, tiling);
+			if ((supportedFeatures & features) == features) {
+				return format;
+			}
+		}
 
-        auto windowExtent = window.getFramebufferSize();
-        windowExtent.width = Util::clamp(windowExtent.width, capabilities.minImageExtent.width,
-                                         capabilities.maxImageExtent.width);
-        windowExtent.height = Util::clamp(windowExtent.height, capabilities.minImageExtent.height,
-                                          capabilities.maxImageExtent.height);
-        return windowExtent;
-    }
+		throw Logger::error{"No supported format found."};
+	}
 
-    void Renderer::createRenderTargets() {
-        std::vector<vk::Format> formats {
-                vk::Format::eD32SfloatS8Uint,
-                vk::Format::eD24UnormS8Uint
-        };
+	void Renderer::createRenderPass() {
+		std::vector<vk::AttachmentDescription> attachments;
 
-        depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
-                vk::FormatFeatureFlagBits::eDepthStencilAttachment);
-    }
+		// Color Attachment
+		attachments.emplace_back(
+			vk::AttachmentDescriptionFlags(),
+			surfaceFormat.format,
+			vk::SampleCountFlagBits::e1,
+			vk::AttachmentLoadOp::eDontCare,
+			vk::AttachmentStoreOp::eStore,
+			vk::AttachmentLoadOp::eDontCare,
+			vk::AttachmentStoreOp::eDontCare,
+			vk::ImageLayout::eUndefined,
+			vk::ImageLayout::ePresentSrcKHR
+		);
 
-    vk::Format Renderer::chooseSupportedFormat(std::vector<vk::Format> formats, vk::ImageTiling tiling,
-                                               vk::FormatFeatureFlags features) {
-        for (const auto& format : formats) {
-            auto supportedFeatures = device->getFormatFeaturesForTiling(format, tiling);
-            if ((supportedFeatures & features) == features) {
-                return format;
-            }
-        }
+		// Depth Attachment
+		attachments.emplace_back(
+			vk::AttachmentDescriptionFlags(),
+			depthFormat,
+			vk::SampleCountFlagBits::e1,
+			vk::AttachmentLoadOp::eDontCare,
+			vk::AttachmentStoreOp::eDontCare,
+			vk::AttachmentLoadOp::eLoad,
+			vk::AttachmentStoreOp::eStore,
+			vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eDepthStencilAttachmentOptimal
+		);
 
-        throw Logger::error{"No supported format found."};
-    }
+		vk::AttachmentReference colorReference{
+			0u,
+			vk::ImageLayout::eColorAttachmentOptimal
+		};
 
-    void Renderer::createRenderPass() {
-        std::vector<vk::AttachmentDescription> attachments;
+		vk::AttachmentReference depthReference{
+			1u,
+			vk::ImageLayout::eDepthStencilAttachmentOptimal
+		};
 
-        // Color Attachment
-        attachments.emplace_back(
-            vk::AttachmentDescriptionFlags(),
-            surfaceFormat.format,
-            vk::SampleCountFlagBits::e1,
-            vk::AttachmentLoadOp::eDontCare,
-            vk::AttachmentStoreOp::eStore,
-            vk::AttachmentLoadOp::eDontCare,
-            vk::AttachmentStoreOp::eDontCare,
-            vk::ImageLayout::eUndefined,
-            vk::ImageLayout::ePresentSrcKHR
-        );
+		vk::SubpassDescription subpassDescription{
+			vk::SubpassDescriptionFlags(),
+			vk::PipelineBindPoint::eGraphics,
+			0u,
+			nullptr,
+			1u,
+			&colorReference,
+			nullptr,
+			&depthReference
+		};
 
-        // Depth Attachment
-        attachments.emplace_back(
-                vk::AttachmentDescriptionFlags(),
-                depthFormat,
-                vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eDontCare,
-                vk::AttachmentStoreOp::eDontCare,
-                vk::AttachmentLoadOp::eLoad,
-                vk::AttachmentStoreOp::eStore,
-                vk::ImageLayout::eUndefined,
-                vk::ImageLayout::eDepthStencilAttachmentOptimal
-        );
+		renderPass = device->createRenderPass({
+			vk::RenderPassCreateFlags(),
+			static_cast<uint32_t>(attachments.size()),
+			attachments.data(),
+			1u,
+			&subpassDescription,
+			0u,
+			nullptr
+		});
+	}
 
-        vk::AttachmentReference colorReference{
-            0u,
-            vk::ImageLayout::eColorAttachmentOptimal
-        };
+	void Renderer::createFramebuffers() {
+		vk::ImageView attachments[2];
+		attachments[1] = depthImageView;
+		vk::Extent2D windowExtent = window.getFramebufferSize();
 
-        vk::AttachmentReference depthReference{
-                1u,
-                vk::ImageLayout::eDepthStencilAttachmentOptimal
-        };
-
-        vk::SubpassDescription subpassDescription {
-            vk::SubpassDescriptionFlags(),
-            vk::PipelineBindPoint::eGraphics,
-            0u,
-            nullptr,
-            1u,
-            &colorReference,
-            nullptr,
-            &depthReference
-        };
-
-        renderPass = device->createRenderPass({
-            vk::RenderPassCreateFlags(),
-            static_cast<uint32_t>(attachments.size()),
-            attachments.data(),
-            1u,
-            &subpassDescription,
-            0u,
-            nullptr
-        });
-    }
+		framebuffers = device->createFramebuffers({
+			vk::FramebufferCreateFlags(),
+			renderPass,
+			2u,
+			nullptr,
+			windowExtent.width,
+			windowExtent.height,
+			1u
+		}, images);
+	}
 }

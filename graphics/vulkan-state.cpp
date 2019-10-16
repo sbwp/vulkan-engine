@@ -5,5 +5,5 @@
 #include "vulkan-state.hpp"
 
 namespace Graphics {
-    // TODO: Delete if unused
+	// TODO: Delete if unused
 }

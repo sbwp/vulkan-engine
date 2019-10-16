@@ -9,10 +9,10 @@
 #include <vector>
 
 namespace Graphics {
-    void setupValidationLayers(std::vector<const char*>& instanceExtensions, std::vector<const char*>& validationLayers);
+	void
+	setupValidationLayers(std::vector<const char*>& instanceExtensions, std::vector<const char*>& validationLayers);
 
-    void setupValidationCallback();
+	void setupValidationCallback();
 }
-
 
 #endif //VULKAN_ENGINE_VALIDATION_HPP
