@@ -21,6 +21,8 @@ namespace Graphics {
 		createInstance();
 		surface = window.createSurface(instance);
 		choosePhysicalDevice();
+		device->createLogicalDevice(deviceExtensions, validationLayers);
+		allocator = device->createAllocator();
 		createSynchronization();
 		createCommandPool();
 		createCommandBuffers();
@@ -46,7 +48,7 @@ namespace Graphics {
 	void Renderer::createInstance() {
 		auto appInfo = game.makeAppInfo();
 		vk::InstanceCreateInfo createInfo{
-			vk::InstanceCreateFlags(),
+			{},
 			&appInfo,
 			static_cast<uint32_t>(validationLayers.size()),
 			validationLayers.data(),
@@ -64,7 +66,7 @@ namespace Graphics {
 
 		devices.reserve(physicalDevices.size());
 		for (auto& physicalDevice : physicalDevices) {
-			devices.emplace_back(physicalDevice, surface, deviceExtensions, validationLayers);
+			devices.emplace_back(physicalDevice, surface, deviceExtensions);
 		}
 
 		auto best = std::max_element(begin(devices), end(devices));
@@ -105,7 +107,7 @@ namespace Graphics {
 		bool queuesSame = indices[0] == indices[1];
 
 		swapchain = device->createSwapchain({
-			vk::SwapchainCreateFlagsKHR(),
+			{},
 			surface,
 			maxFrames,
 			surfaceFormat.format,
@@ -183,7 +185,7 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eDeviceLocal, mipLevels);
 
 		depthImageView = device->createImageView({
-			vk::ImageViewCreateFlags(),
+			{},
 			depthImage,
 			vk::ImageViewType::e2D,
 			depthFormat,
@@ -215,7 +217,7 @@ namespace Graphics {
 
 		// Color Attachment
 		attachments.emplace_back(
-			vk::AttachmentDescriptionFlags(),
+			vk::AttachmentDescriptionFlags{},
 			surfaceFormat.format,
 			vk::SampleCountFlagBits::e1,
 			vk::AttachmentLoadOp::eDontCare,
@@ -228,7 +230,7 @@ namespace Graphics {
 
 		// Depth Attachment
 		attachments.emplace_back(
-			vk::AttachmentDescriptionFlags(),
+			vk::AttachmentDescriptionFlags{},
 			depthFormat,
 			vk::SampleCountFlagBits::e1,
 			vk::AttachmentLoadOp::eDontCare,
@@ -250,7 +252,7 @@ namespace Graphics {
 		};
 
 		vk::SubpassDescription subpassDescription{
-			vk::SubpassDescriptionFlags(),
+			{},
 			vk::PipelineBindPoint::eGraphics,
 			0u,
 			nullptr,
@@ -261,7 +263,7 @@ namespace Graphics {
 		};
 
 		renderPass = device->createRenderPass({
-			vk::RenderPassCreateFlags(),
+			{},
 			static_cast<uint32_t>(attachments.size()),
 			attachments.data(),
 			1u,
@@ -277,7 +279,7 @@ namespace Graphics {
 		vk::Extent2D windowExtent = window.getFramebufferSize();
 
 		framebuffers = device->createFramebuffers({
-			vk::FramebufferCreateFlags(),
+			{},
 			renderPass,
 			2u,
 			nullptr,

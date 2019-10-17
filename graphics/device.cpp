@@ -9,8 +9,7 @@
 
 namespace Graphics {
 	Device::Device(vk::PhysicalDevice device, vk::SurfaceKHR& surface,
-				   std::vector<char const*> const& deviceExtensions,
-				   std::vector<char const*> const& validationLayers) : physicalDevice(device), surface(surface) {
+				   std::vector<char const*> const& deviceExtensions) : physicalDevice(device), surface(surface) {
 		queueFamilies = device.getQueueFamilyProperties();
 		Logger::assertNotEmpty(queueFamilies, "Device supports no queue families.");
 
@@ -30,8 +29,6 @@ namespace Graphics {
 		graphicsQueueFamilyIndex = findGraphicsQueueFamilyIndex();
 		presentQueueFamilyIndex = findPresentQueueFamilyIndex();
 		rating = rate(deviceExtensions);
-
-		createLogicalDevice(deviceExtensions, validationLayers);
 	}
 
 	std::vector<vk::DeviceQueueCreateInfo> Device::getDeviceQueueCreateInfos(float* queuePriorities) {
@@ -96,7 +93,7 @@ namespace Graphics {
 
 	vk::DeviceQueueCreateInfo Device::generateDeviceQueueCreateInfo(uint32_t index, float* queuePriorities) {
 		return vk::DeviceQueueCreateInfo{
-			vk::DeviceQueueCreateFlags(),
+			{},
 			index,
 			1u,
 			queuePriorities
@@ -112,7 +109,7 @@ namespace Graphics {
 		// deviceFeatures.whatever = true; // Get rid of this comment once there is one to use as an example.
 
 		logicalDevice = physicalDevice.createDevice({
-			vk::DeviceCreateFlags(),
+			{},
 			static_cast<uint32_t>(queueCreateInfos.size()),
 			queueCreateInfos.data(),
 			static_cast<uint32_t>(validationLayers.size()),
@@ -167,7 +164,7 @@ namespace Graphics {
 
 		for (auto& image : swapchainImages) {
 			images.emplace_back(image, createImageView({
-				vk::ImageViewCreateFlags(),
+				{},
 				image,
 				vk::ImageViewType::e2D,
 				format,
@@ -206,7 +203,7 @@ namespace Graphics {
 		if (tiling == vk::ImageTiling::eOptimal) {
 			return formatProperties.optimalTilingFeatures;
 		}
-		return vk::FormatFeatureFlags();
+		return {};
 	}
 
 	vk::RenderPass Device::createRenderPass(vk::RenderPassCreateInfo const& info) {
@@ -217,7 +214,7 @@ namespace Graphics {
 								  vk::ImageUsageFlagBits usageFlags,
 								  vk::MemoryPropertyFlagBits memoryPropertyFlags, uint32_t mipLevels) {
 		return logicalDevice.createImage({
-			vk::ImageCreateFlags(),
+			{},
 			vk::ImageType::e2D,
 			format,
 			{extent.width, extent.height, 1u},
@@ -240,5 +237,13 @@ namespace Graphics {
 		}
 
 		return framebuffers;
+	}
+
+	vma::Allocator Device::createAllocator() {
+		return vma::createAllocator({
+			{},
+			physicalDevice,
+			logicalDevice
+		});
 	}
 }

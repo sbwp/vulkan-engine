@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <vma.hpp>
 
 #include "../glfw/window.hpp"
 #include "../core/game.hpp"
@@ -39,6 +40,7 @@ namespace Graphics {
 
 		std::vector<Device> devices;
 		Device* device = nullptr;
+		vma::Allocator allocator;
 
 		std::vector<vk::Semaphore> semaphores;
 		std::vector<vk::Fence> commandBufferFences;
