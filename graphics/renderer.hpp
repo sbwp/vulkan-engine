@@ -54,8 +54,7 @@ namespace Graphics {
 		vk::SwapchainKHR swapchain;
 		std::vector<Image> images;
 		vk::Format depthFormat;
-		vk::Image depthImage;
-		vk::ImageView depthImageView;
+		Image depthImage;
 		vk::RenderPass renderPass;
 		std::vector<vk::Framebuffer> framebuffers;
 
@@ -81,6 +80,9 @@ namespace Graphics {
 
 		vk::Format chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
 										 const vk::FormatFeatureFlags& features);
+		Image createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
+									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
+									const vk::ImageAspectFlags& aspectFlags);
 	};
 }
 

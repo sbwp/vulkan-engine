@@ -10,6 +10,7 @@ namespace glfw{
     Window::Window(int width, int height, std::string const& title) {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
         window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     }
 

@@ -14,7 +14,7 @@
 #include "../util/algorithm.hpp"
 
 namespace Graphics {
-	Renderer::Renderer(Core::Game& game) : game(game), window(1820, 980, "Vulkan Engine"),
+	Renderer::Renderer(Core::Game& game) : game(game), window(1820, 954, "Vulkan Engine"),
 										   presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined) {
 		glfw::appendRequiredExtensions(instanceExtensions);
 		setupValidationLayers(instanceExtensions, validationLayers);
@@ -128,7 +128,7 @@ namespace Graphics {
 			presentMode
 		});
 
-		images = device->getSwapchainImages(swapchain, surfaceFormat.format, depthImageView);
+		images = device->getSwapchainImages(swapchain, surfaceFormat.format, depthImage.getView());
 	}
 
 	vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
@@ -180,24 +180,9 @@ namespace Graphics {
 		depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
-		depthImage = device->createImage(depthFormat, extent, vk::ImageTiling::eOptimal,
+		depthImage = createImage(depthFormat, extent, vk::ImageTiling::eOptimal,
 			vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			vk::MemoryPropertyFlagBits::eDeviceLocal, mipLevels);
-
-		depthImageView = device->createImageView({
-			{},
-			depthImage,
-			vk::ImageViewType::e2D,
-			depthFormat,
-			{},
-			{
-				vk::ImageAspectFlagBits::eDepth,
-				0u,
-				mipLevels,
-				0u,
-				1u
-			}
-		});
+			vk::MemoryPropertyFlagBits::eDeviceLocal, vk::ImageAspectFlagBits::eDepth);
 	}
 
 	vk::Format Renderer::chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
@@ -274,8 +259,6 @@ namespace Graphics {
 	}
 
 	void Renderer::createFramebuffers() {
-		vk::ImageView attachments[2];
-		attachments[1] = depthImageView;
 		vk::Extent2D windowExtent = window.getFramebufferSize();
 
 		framebuffers = device->createFramebuffers({
@@ -286,6 +269,42 @@ namespace Graphics {
 			windowExtent.width,
 			windowExtent.height,
 			1u
-		}, images);
+		}, images, depthImage.getView());
+	}
+
+	Image Renderer::createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
+		vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
+		const vk::ImageAspectFlags& aspectFlags) {
+		auto imageAllocation = allocator.createImage({
+			{},
+			vk::ImageType::e2D,
+			format,
+			{extent.width, extent.height, 1u},
+			mipLevels,
+			1u,
+			vk::SampleCountFlagBits::e1,
+			tiling,
+			usageFlags
+		}, {
+			{},
+			vma::MemoryUsage::eGpuOnly
+		});
+
+		auto imageView = device->createImageView({
+			{},
+			imageAllocation.first,
+			vk::ImageViewType::e2D,
+			depthFormat,
+			{},
+			{
+				vk::ImageAspectFlagBits::eDepth,
+				0u,
+				mipLevels,
+				0u,
+				1u
+			}
+		});
+
+		return Image(imageAllocation.first, imageView, imageAllocation.second);
 	}
 }

@@ -5,10 +5,25 @@
 #include "image.hpp"
 
 namespace Graphics {
-	Image::Image(vk::Image image, vk::ImageView imageView, vk::ImageView depthImageView)
-		: image(image), attachments{imageView, depthImageView} {}
+	Image::Image(vk::Image image, vk::ImageView view, vma::Allocation allocation)
+		: image(image), view(view), allocation(allocation), attachments(nullptr) {}
 
-	vk::ImageView const* Image::getAttachments() const {
-		return attachments.data();
+	Image::Image(vk::Image image, vk::ImageView view)
+		: image(image), view(view), attachments(nullptr) {}
+
+	vk::ImageView Image::getView() {
+		return view;
+	}
+
+	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView) {
+		attachments = new vk::ImageView[2]{
+			view,
+			depthImageView
+		};
+		return attachments;
+	}
+
+	Image::~Image() {
+		delete[] attachments;
 	}
 }

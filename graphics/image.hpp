@@ -5,17 +5,25 @@
 #ifndef VULKAN_ENGINE_IMAGE_HPP
 #define VULKAN_ENGINE_IMAGE_HPP
 
+#include <optional>
 #include <vulkan/vulkan.hpp>
+#include <vma.hpp>
 
 namespace Graphics {
 	class Image {
 	public:
-		Image(vk::Image image, vk::ImageView imageView, vk::ImageView depthImageView);
+		Image() = default;
+		Image (vk::Image image, vk::ImageView view, vma::Allocation allocation);
+		Image (vk::Image image, vk::ImageView view);
+		~Image();
 
-		[[nodiscard]] vk::ImageView const* getAttachments() const;
+		vk::ImageView getView();
+		vk::ImageView* setupAttachments(vk::ImageView depthImageView);
 	private:
 		vk::Image image;
-		std::array<vk::ImageView, 2> attachments;
+		vk::ImageView view;
+		std::optional<vma::Allocation> allocation;
+		vk::ImageView* attachments;
 	};
 }
 #endif //VULKAN_ENGINE_IMAGE_HPP

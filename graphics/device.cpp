@@ -181,7 +181,7 @@ namespace Graphics {
 					0u,
 					1u
 				}
-			}), depthImageView);
+			}));
 		}
 
 		return images;
@@ -227,12 +227,13 @@ namespace Graphics {
 	}
 
 	std::vector<vk::Framebuffer> Device::createFramebuffers(vk::FramebufferCreateInfo createInfo,
-															std::vector<Image> const& images) {
+															std::vector<Image> const& images,
+															vk::ImageView const& depthView) {
 		std::vector<vk::Framebuffer> framebuffers{};
 		framebuffers.reserve(images.size());
 
-		for (auto const& image : images) {
-			createInfo.pAttachments = image.getAttachments();
+		for (auto image : images) {
+			createInfo.pAttachments = image.setupAttachments(depthView);
 			framebuffers.push_back(logicalDevice.createFramebuffer(createInfo));
 		}
 
@@ -245,5 +246,9 @@ namespace Graphics {
 			physicalDevice,
 			logicalDevice
 		});
+	}
+
+	vk::MemoryRequirements Device::getImageMemoryRequirements(vk::Image image) {
+		return logicalDevice.getImageMemoryRequirements(image);
 	}
 }

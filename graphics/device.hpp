@@ -47,12 +47,14 @@ namespace Graphics {
 					vk::MemoryPropertyFlagBits memoryPropertyFlags, uint32_t mipLevels);
 
 		std::vector<vk::Framebuffer> createFramebuffers(vk::FramebufferCreateInfo createInfo,
-														std::vector<Image> const& images);
+														std::vector<Image> const& images,
+														vk::ImageView const& depthView);
 
 		void createLogicalDevice(std::vector<char const*> const& deviceExtensions,
 								 std::vector<char const*> const& validationLayers);
 
 		vma::Allocator createAllocator();
+		vk::MemoryRequirements getImageMemoryRequirements(vk::Image image);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;
