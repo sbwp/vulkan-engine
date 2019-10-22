@@ -55,6 +55,9 @@ namespace Graphics {
 
 		vma::Allocator createAllocator();
 		vk::MemoryRequirements getImageMemoryRequirements(vk::Image image);
+		vk::ShaderModule createShaderModule(std::vector<char> code);
+		vk::PipelineLayout createPipelineLayout(vk::PipelineLayoutCreateInfo info);
+		vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo info);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

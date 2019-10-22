@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <fstream>
 
 namespace Util {
     template <typename Collection, typename ValueType>
@@ -28,6 +29,8 @@ namespace Util {
     T const& clamp(T const& value, T const& min, T const& max) {
         return std::max(min, std::min(max, value));
     }
+
+    std::vector<char> readFile(const std::string& filename);
 }
 
 #endif //VULKAN_ENGINE_ALGORITHM_HPP

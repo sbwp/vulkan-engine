@@ -57,6 +57,8 @@ namespace Graphics {
 		Image depthImage;
 		vk::RenderPass renderPass;
 		std::vector<vk::Framebuffer> framebuffers;
+		vk::PipelineLayout pipelineLayout;
+		vk::Pipeline graphicsPipeline;
 
 		const uint32_t mipLevels = 1u; // TODO acutally implement miplevels
 
@@ -75,6 +77,8 @@ namespace Graphics {
 		void createDepthImage();
 		void createRenderPass();
 		void createFramebuffers();
+		void createTextureImage();
+		void createGraphicsPipeline();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
 

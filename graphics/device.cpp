@@ -251,4 +251,20 @@ namespace Graphics {
 	vk::MemoryRequirements Device::getImageMemoryRequirements(vk::Image image) {
 		return logicalDevice.getImageMemoryRequirements(image);
 	}
+
+	vk::ShaderModule Device::createShaderModule(std::vector<char> code) {
+		return logicalDevice.createShaderModule({
+			{},
+			code.size(),
+			reinterpret_cast<const uint32_t*>(code.data())
+		});
+	}
+
+	vk::PipelineLayout Device::createPipelineLayout(vk::PipelineLayoutCreateInfo info) {
+		return logicalDevice.createPipelineLayout(info);
+	}
+
+	vk::Pipeline Device::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo info) {
+		return logicalDevice.createGraphicsPipeline(nullptr, info);
+	}
 }

@@ -12,10 +12,11 @@
 #include "../logger/logger.hpp"
 #include "validation.hpp"
 #include "../util/algorithm.hpp"
+#include "shader.hpp"
 
 namespace Graphics {
-	Renderer::Renderer(Core::Game& game) : game(game), window(1820, 954, "Vulkan Engine"),
-										   presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined) {
+	Renderer::Renderer(Core::Game& game): game(game), window(1820, 954, "Vulkan Engine"),
+										  presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined) {
 		glfw::appendRequiredExtensions(instanceExtensions);
 		setupValidationLayers(instanceExtensions, validationLayers);
 		createInstance();
@@ -33,6 +34,8 @@ namespace Graphics {
 		createSwapchain();
 		createRenderPass();
 		createFramebuffers();
+		createTextureImage();
+		createGraphicsPipeline();
 	}
 
 	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -273,8 +276,8 @@ namespace Graphics {
 	}
 
 	Image Renderer::createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
-		vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
-		const vk::ImageAspectFlags& aspectFlags) {
+								vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
+								const vk::ImageAspectFlags& aspectFlags) {
 		auto imageAllocation = allocator.createImage({
 			{},
 			vk::ImageType::e2D,
@@ -306,5 +309,112 @@ namespace Graphics {
 		});
 
 		return Image(imageAllocation.first, imageView, imageAllocation.second);
+	}
+
+	void Renderer::createTextureImage() {
+
+	}
+
+	void Renderer::createGraphicsPipeline() {
+		auto vertexShader = Shader("vertex", device, vk::ShaderStageFlagBits::eVertex);
+		auto fragmentShader = Shader("fragment", device, vk::ShaderStageFlagBits::eFragment);
+
+		vk::PipelineShaderStageCreateInfo shaderStages[] = {
+			vertexShader.getShaderStageCreateInfo(),
+			fragmentShader.getShaderStageCreateInfo()
+		};
+
+		vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{};
+
+		vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo{
+			{},
+			vk::PrimitiveTopology::eTriangleList,
+			false
+		};
+
+		vk::Viewport viewport{
+			0.0f,
+			0.0f,
+			static_cast<float>(extent.width),
+			static_cast<float>(extent.height),
+			0.0f,
+			1.0f
+		};
+
+		vk::Rect2D scissor = {{0, 0}, extent};
+
+		vk::PipelineViewportStateCreateInfo viewportState{
+			{},
+			1,
+			&viewport,
+			1,
+			&scissor
+		};
+
+		vk::PipelineRasterizationStateCreateInfo rasterizer{{},
+			false,
+			false,
+			vk::PolygonMode::eFill,
+			vk::CullModeFlagBits::eBack,
+			vk::FrontFace::eClockwise,
+			false,
+			0.0f,
+			0.0f,
+			0.0f,
+			1.0f
+		};
+
+		vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo{
+			{},
+			vk::SampleCountFlagBits::e1,
+			false,
+			1.0f
+		};
+
+		// TODO: vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{};
+
+		vk::ColorComponentFlags rgbaColorComponents = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+			vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+		vk::PipelineColorBlendAttachmentState colorBlendAttachment{
+			false,
+			vk::BlendFactor::eOne,
+			vk::BlendFactor::eZero,
+			vk::BlendOp::eAdd,
+			vk::BlendFactor::eOne,
+			vk::BlendFactor::eZero,
+			vk::BlendOp::eAdd,
+			rgbaColorComponents
+		};
+
+		vk::PipelineColorBlendStateCreateInfo colorBlendState{
+			{},
+			false,
+			vk::LogicOp::eCopy,
+			1u,
+			&colorBlendAttachment
+		};
+
+		pipelineLayout = device->createPipelineLayout({});
+
+		vk::GraphicsPipelineCreateInfo pipelineCreateInfo{
+			{},
+			2u,
+			shaderStages,
+			&vertexInputStateCreateInfo,
+			&pipelineInputAssemblyStateCreateInfo,
+			nullptr,
+			&viewportState,
+			&rasterizer,
+			&multisampleStateCreateInfo,
+			nullptr,
+			&colorBlendState,
+			nullptr,
+			pipelineLayout,
+			renderPass,
+			0u
+		};
+
+		graphicsPipeline = device->createGraphicsPipeline(pipelineCreateInfo);
 	}
 }
