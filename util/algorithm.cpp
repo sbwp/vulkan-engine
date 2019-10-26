@@ -20,4 +20,12 @@ namespace Util {
 		file.close();
 		return buffer;
 	}
+
+	vk::ClearValue makeClearColor(float r, float g, float b, float a) {
+		return vk::ClearValue{vk::ClearColorValue{std::array<float, 4>{r, g, b, a}}};
+	}
+
+	vk::ClearValue makeClearColor(float r, float g, float b) {
+		return makeClearColor(r, g, b, 1.0f);
+	}
 }

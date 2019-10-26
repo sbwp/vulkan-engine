@@ -34,8 +34,7 @@ namespace Graphics {
 		std::vector<vk::CommandBuffer> allocateCommandBuffers(vk::CommandBufferAllocateInfo const& info);
 		vk::SwapchainKHR createSwapchain(vk::SwapchainCreateInfoKHR const& info);
 
-		std::vector<Image> getSwapchainImages(vk::SwapchainKHR const& swapchain, vk::Format const& format,
-												  vk::ImageView const& depthImageView);
+		std::vector<Image> getSwapchainImages(vk::SwapchainKHR const& swapchain, vk::Format const& format);
 
 		vk::ImageView createImageView(vk::ImageViewCreateInfo const& info);
 		vk::RenderPass createRenderPass(vk::RenderPassCreateInfo const& info);
@@ -58,6 +57,9 @@ namespace Graphics {
 		vk::ShaderModule createShaderModule(std::vector<char> code);
 		vk::PipelineLayout createPipelineLayout(vk::PipelineLayoutCreateInfo info);
 		vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo info);
+		uint32_t acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore);
+		void resetFence(vk::Fence fence);
+		void waitForFence(vk::Fence& fence);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

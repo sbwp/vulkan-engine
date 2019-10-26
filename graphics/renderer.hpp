@@ -25,6 +25,7 @@ namespace Graphics {
 
 	private:
 		static int const maxFrames = 2;
+		int currentFrame = 0;
 		Core::Game& game;
 
 		std::vector<const char*> instanceExtensions{
@@ -42,7 +43,8 @@ namespace Graphics {
 		Device* device = nullptr;
 		vma::Allocator allocator;
 
-		std::vector<vk::Semaphore> semaphores;
+		std::vector<vk::Semaphore> imageAvailableSemaphores;
+		std::vector<vk::Semaphore> renderFinishedSemaphores;
 		std::vector<vk::Fence> commandBufferFences;
 
 		vk::CommandPool commandPool;

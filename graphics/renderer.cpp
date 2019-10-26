@@ -25,8 +25,6 @@ namespace Graphics {
 		device->createLogicalDevice(deviceExtensions, validationLayers);
 		allocator = device->createAllocator();
 		createSynchronization();
-		createCommandPool();
-		createCommandBuffers();
 		surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
 		presentMode = choosePresentMode(device->presentModes);
 		extent = chooseExtent(device->surfaceCapabilities);
@@ -36,12 +34,39 @@ namespace Graphics {
 		createFramebuffers();
 		createTextureImage();
 		createGraphicsPipeline();
+		createCommandPool();
+		createCommandBuffers();
 	}
 
 	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
 
 	void Renderer::run() {
 		glfw::tick();
+		device->waitForFence(commandBufferFences[currentFrame]);
+		uint32_t nextImageIndex = device->acquireNextImage(swapchain, imageAvailableSemaphores[currentFrame]);
+		vk::PipelineStageFlags temp = vk::PipelineStageFlagBits::eVertexInput;
+		vk::SubmitInfo submitInfo{
+			1u,
+			&(imageAvailableSemaphores[currentFrame]),
+			&temp,
+			1u,
+			&(commandBuffers[nextImageIndex]),
+			1u,
+			&(renderFinishedSemaphores[currentFrame])
+		};
+		device->resetFence(commandBufferFences[currentFrame]);\
+		device->graphicsQueue.submit(1u, &submitInfo, commandBufferFences[currentFrame]);
+
+		device->presentQueue.presentKHR({
+			1,
+			&(renderFinishedSemaphores[currentFrame]),
+			1u,
+			&swapchain,
+			&nextImageIndex,
+			nullptr
+		});
+
+		currentFrame = (currentFrame + 1) % maxFrames;
 	}
 
 	bool Renderer::shouldContinue() {
@@ -80,11 +105,13 @@ namespace Graphics {
 
 	void Renderer::createSynchronization() {
 		vk::SemaphoreCreateInfo semaphoreCreateInfo{};
-		vk::FenceCreateInfo fenceCreateInfo{};
-		semaphores.reserve(maxFrames);
+		vk::FenceCreateInfo fenceCreateInfo{vk::FenceCreateFlagBits::eSignaled};
+		imageAvailableSemaphores.reserve(maxFrames);
+		renderFinishedSemaphores.reserve(maxFrames);
 		commandBufferFences.reserve(maxFrames);
 		for (int i = 0; i < maxFrames; ++i) {
-			semaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
+			imageAvailableSemaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
+			renderFinishedSemaphores.push_back(device->createSemaphore(semaphoreCreateInfo));
 			commandBufferFences.push_back(device->createFence(fenceCreateInfo));
 		}
 	}
@@ -103,6 +130,31 @@ namespace Graphics {
 			vk::CommandBufferLevel::ePrimary,
 			maxFrames
 		});
+
+		vk::CommandBufferBeginInfo beginInfo{};
+
+		for (int i = 0; i < maxFrames; i++) {
+			auto& commandBuffer = commandBuffers[i];
+			commandBuffer.begin(&beginInfo);
+			{
+				auto clearColor = Util::makeClearColor(0.0f, 0.0f, 0.0f);
+				vk::RenderPassBeginInfo renderPassBeginInfo{
+					renderPass,
+					framebuffers[i],
+					{{0, 0}, extent},
+					1u,
+					&clearColor
+				};
+
+				commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+				{
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+					commandBuffer.draw(3, 1, 0, 0);
+				}
+				commandBuffer.endRenderPass();
+			}
+			commandBuffer.end();
+		}
 	}
 
 	void Renderer::createSwapchain() {
@@ -131,7 +183,7 @@ namespace Graphics {
 			presentMode
 		});
 
-		images = device->getSwapchainImages(swapchain, surfaceFormat.format, depthImage.getView());
+		images = device->getSwapchainImages(swapchain, surfaceFormat.format);
 	}
 
 	vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
@@ -370,8 +422,14 @@ namespace Graphics {
 			false,
 			1.0f
 		};
-
-		// TODO: vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{};
+		vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{
+			{},
+			true,
+			true,
+			vk::CompareOp::eLess,
+			false,
+			false
+		};
 
 		vk::ColorComponentFlags rgbaColorComponents = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
 			vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
@@ -407,7 +465,7 @@ namespace Graphics {
 			&viewportState,
 			&rasterizer,
 			&multisampleStateCreateInfo,
-			nullptr,
+			&depthStencilStateCreateInfo,
 			&colorBlendState,
 			nullptr,
 			pipelineLayout,

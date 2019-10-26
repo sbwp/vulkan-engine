@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <fstream>
+#include <vulkan/vulkan.hpp>
 
 namespace Util {
     template <typename Collection, typename ValueType>
@@ -31,6 +32,10 @@ namespace Util {
     }
 
     std::vector<char> readFile(const std::string& filename);
+
+    vk::ClearValue makeClearColor(float r, float g, float b, float a);
+
+	vk::ClearValue makeClearColor(float r, float g, float b);
 }
 
 #endif //VULKAN_ENGINE_ALGORITHM_HPP

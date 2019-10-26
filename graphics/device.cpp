@@ -156,8 +156,7 @@ namespace Graphics {
 		return logicalDevice.createSwapchainKHR(info);
 	}
 
-	std::vector<Image> Device::getSwapchainImages(vk::SwapchainKHR const& swapchain, vk::Format const& format,
-												  vk::ImageView const& depthImageView) {
+	std::vector<Image> Device::getSwapchainImages(vk::SwapchainKHR const& swapchain, vk::Format const& format) {
 		auto swapchainImages = logicalDevice.getSwapchainImagesKHR(swapchain);
 		std::vector<Image> images{};
 		images.reserve(swapchainImages.size());
@@ -265,6 +264,18 @@ namespace Graphics {
 	}
 
 	vk::Pipeline Device::createGraphicsPipeline(vk::GraphicsPipelineCreateInfo info) {
-		return logicalDevice.createGraphicsPipeline(nullptr, info);
+		return logicalDevice.createGraphicsPipeline(vk::PipelineCache{}, info);
+	}
+
+	uint32_t Device::acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore) {
+		return logicalDevice.acquireNextImageKHR(swapchain, 1u, semaphore, {}).value;
+	}
+
+	void Device::resetFence(vk::Fence fence) {
+		logicalDevice.resetFences(1, &fence);
+	}
+
+	void Device::waitForFence(vk::Fence& fence) {
+		logicalDevice.waitForFences(1, &fence, true, UINT64_MAX);
 	}
 }

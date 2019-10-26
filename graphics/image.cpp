@@ -20,6 +20,7 @@ namespace Graphics {
 			view,
 			depthImageView
 		};
+
 		return attachments;
 	}
 
