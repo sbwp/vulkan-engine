@@ -57,7 +57,7 @@ namespace Graphics {
 		device->resetFence(commandBufferFences[currentFrame]);\
 		device->graphicsQueue.submit(1u, &submitInfo, commandBufferFences[currentFrame]);
 
-		device->presentQueue.presentKHR({
+		auto results = device->presentQueue.presentKHR({
 			1,
 			&(renderFinishedSemaphores[currentFrame]),
 			1u,
@@ -137,7 +137,7 @@ namespace Graphics {
 			auto& commandBuffer = commandBuffers[i];
 			commandBuffer.begin(&beginInfo);
 			{
-				auto clearColor = Util::makeClearColor(0.0f, 0.0f, 0.0f);
+				auto clearColor = Util::makeClearColor(0.0f, 1.0f, 0.0f);
 				vk::RenderPassBeginInfo renderPassBeginInfo{
 					renderPass,
 					framebuffers[i],
@@ -178,7 +178,7 @@ namespace Graphics {
 			? 1u
 			: 2u,
 			indices,
-			vk::SurfaceTransformFlagBitsKHR::eIdentity,
+			device->surfaceCapabilities.currentTransform,
 			vk::CompositeAlphaFlagBitsKHR::eOpaque,
 			presentMode
 		});
@@ -260,7 +260,7 @@ namespace Graphics {
 			vk::AttachmentDescriptionFlags{},
 			surfaceFormat.format,
 			vk::SampleCountFlagBits::e1,
-			vk::AttachmentLoadOp::eDontCare,
+			vk::AttachmentLoadOp::eClear,
 			vk::AttachmentStoreOp::eStore,
 			vk::AttachmentLoadOp::eDontCare,
 			vk::AttachmentStoreOp::eDontCare,
@@ -302,20 +302,29 @@ namespace Graphics {
 			&depthReference
 		};
 
+		vk::SubpassDependency dependency{
+			VK_SUBPASS_EXTERNAL,
+			0u,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			vk::AccessFlags(),
+			vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite
+		};
+
 		renderPass = device->createRenderPass({
 			{},
 			static_cast<uint32_t>(attachments.size()),
 			attachments.data(),
 			1u,
 			&subpassDescription,
-			0u,
-			nullptr
+			1u,
+			&dependency
 		});
 	}
 
 	void Renderer::createFramebuffers() {
 		vk::Extent2D windowExtent = window.getFramebufferSize();
-
+		std::cout << windowExtent.width << "x" << windowExtent.height << std::endl;
 		framebuffers = device->createFramebuffers({
 			{},
 			renderPass,
@@ -424,8 +433,8 @@ namespace Graphics {
 		};
 		vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{
 			{},
-			true,
-			true,
+			false, // TODO: Set to true to enable depth testing
+			false, // TODO: Set to true to enable depth writing
 			vk::CompareOp::eLess,
 			false,
 			false

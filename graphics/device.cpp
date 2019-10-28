@@ -168,10 +168,14 @@ namespace Graphics {
 				vk::ImageViewType::e2D,
 				format,
 				vk::ComponentMapping{
-					vk::ComponentSwizzle::eR,
-					vk::ComponentSwizzle::eG,
-					vk::ComponentSwizzle::eB,
-					vk::ComponentSwizzle::eA
+					// vk::ComponentSwizzle::eR,
+					// vk::ComponentSwizzle::eG,
+					// vk::ComponentSwizzle::eB,
+					// vk::ComponentSwizzle::eA
+					vk::ComponentSwizzle::eIdentity,
+					vk::ComponentSwizzle::eIdentity,
+					vk::ComponentSwizzle::eIdentity,
+					vk::ComponentSwizzle::eIdentity
 				},
 				vk::ImageSubresourceRange{
 					vk::ImageAspectFlagBits::eColor,
@@ -268,7 +272,17 @@ namespace Graphics {
 	}
 
 	uint32_t Device::acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore) {
-		return logicalDevice.acquireNextImageKHR(swapchain, 1u, semaphore, {}).value;
+		auto result = logicalDevice.acquireNextImageKHR(swapchain, 1u, semaphore, {});
+		// if (result.result == vk::Result::eErrorOutOfDateKHR) {
+		// 	std::cout << "INVALID SWAPCHAIN NEEDS RECREATION" << std::endl;;
+		// } else if (result.result == vk::Result::eSuboptimalKHR) {
+		// 	std::cout << "SUBOPTIMAL SWAPCHAIN NEEDS RECREATION" << std::endl;;
+		// } else if (result.result == vk::Result::eSuccess) {
+		// 	std::cout << "SWAPCHAIN VALID" << std::endl;
+		// } else {
+		// 	std::cout << "FAILED TO ACQUIRE IMAGE" << std::endl;
+		// }
+		return result.value;
 	}
 
 	void Device::resetFence(vk::Fence fence) {

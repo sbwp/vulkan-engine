@@ -25,7 +25,7 @@ namespace glfw{
 
     vk::SurfaceKHR Window::createSurface(vk::Instance& instance) {
         VkSurfaceKHR c_surface;
-        Logger::assertTrue(glfwCreateWindowSurface(static_cast<VkInstance>(instance), window, nullptr, &c_surface) == VK_SUCCESS,
+        Logger::assertTrue(glfwCreateWindowSurface(VkInstance(instance), window, nullptr, &c_surface) == VK_SUCCESS,
                            "Window surface creation failed.");
         return vk::SurfaceKHR(c_surface);
     }
