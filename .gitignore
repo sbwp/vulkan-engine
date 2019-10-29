@@ -11,3 +11,4 @@ vulkan_engine.cbp
 graphics/renderer.cpp
 graphics/renderer.hpp
 CMakeFiles/
+**/.idea/*

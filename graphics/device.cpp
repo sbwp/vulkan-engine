@@ -271,18 +271,8 @@ namespace Graphics {
 		return logicalDevice.createGraphicsPipeline(vk::PipelineCache{}, info);
 	}
 
-	uint32_t Device::acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore) {
-		auto result = logicalDevice.acquireNextImageKHR(swapchain, 1u, semaphore, {});
-		// if (result.result == vk::Result::eErrorOutOfDateKHR) {
-		// 	std::cout << "INVALID SWAPCHAIN NEEDS RECREATION" << std::endl;;
-		// } else if (result.result == vk::Result::eSuboptimalKHR) {
-		// 	std::cout << "SUBOPTIMAL SWAPCHAIN NEEDS RECREATION" << std::endl;;
-		// } else if (result.result == vk::Result::eSuccess) {
-		// 	std::cout << "SWAPCHAIN VALID" << std::endl;
-		// } else {
-		// 	std::cout << "FAILED TO ACQUIRE IMAGE" << std::endl;
-		// }
-		return result.value;
+	vk::ResultValue<uint32_t> Device::acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore) {
+		return logicalDevice.acquireNextImageKHR(swapchain, 1u, semaphore, {});
 	}
 
 	void Device::resetFence(vk::Fence fence) {
@@ -291,5 +281,9 @@ namespace Graphics {
 
 	void Device::waitForFence(vk::Fence& fence) {
 		logicalDevice.waitForFences(1, &fence, true, UINT64_MAX);
+	}
+
+	void Device::waitUntilIdle() {
+		logicalDevice.waitIdle();
 	}
 }

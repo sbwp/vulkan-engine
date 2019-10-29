@@ -24,18 +24,9 @@ namespace Graphics {
 		choosePhysicalDevice();
 		device->createLogicalDevice(deviceExtensions, validationLayers);
 		allocator = device->createAllocator();
-		createSynchronization();
-		surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
-		presentMode = choosePresentMode(device->presentModes);
-		extent = chooseExtent(device->surfaceCapabilities);
-		createDepthImage();
-		createSwapchain();
-		createRenderPass();
-		createFramebuffers();
-		createTextureImage();
-		createGraphicsPipeline();
 		createCommandPool();
-		createCommandBuffers();
+		createSynchronization();
+		recreateSwapchain();
 	}
 
 	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -43,28 +34,43 @@ namespace Graphics {
 	void Renderer::run() {
 		glfw::tick();
 		device->waitForFence(commandBufferFences[currentFrame]);
-		uint32_t nextImageIndex = device->acquireNextImage(swapchain, imageAvailableSemaphores[currentFrame]);
+		auto imageAcquisition = device->acquireNextImage(swapchain, imageAvailableSemaphores[currentFrame]);
+		if (imageAcquisition.result == vk::Result::eErrorOutOfDateKHR) {
+			recreateSwapchain();
+			return;
+		} else if (imageAcquisition.result != vk::Result::eSuccess && imageAcquisition.result != vk::Result::eSuboptimalKHR) {
+			throw Logger::error("Swapchain image acquisition unsuccessful");
+		}
 		vk::PipelineStageFlags temp = vk::PipelineStageFlagBits::eVertexInput;
 		vk::SubmitInfo submitInfo{
 			1u,
 			&(imageAvailableSemaphores[currentFrame]),
 			&temp,
 			1u,
-			&(commandBuffers[nextImageIndex]),
+			&(commandBuffers[imageAcquisition.value]),
 			1u,
 			&(renderFinishedSemaphores[currentFrame])
 		};
-		device->resetFence(commandBufferFences[currentFrame]);\
+		device->resetFence(commandBufferFences[currentFrame]);
 		device->graphicsQueue.submit(1u, &submitInfo, commandBufferFences[currentFrame]);
 
-		auto results = device->presentQueue.presentKHR({
-			1,
-			&(renderFinishedSemaphores[currentFrame]),
-			1u,
-			&swapchain,
-			&nextImageIndex,
-			nullptr
-		});
+		try {
+			auto result = device->presentQueue.presentKHR({
+				1,
+				&(renderFinishedSemaphores[currentFrame]),
+				1u,
+				&swapchain,
+				&(imageAcquisition.value),
+				nullptr
+			});
+
+			if (window.shouldResize() || result == vk::Result::eSuboptimalKHR) {
+				window.handleResize();
+				throw vk::OutOfDateKHRError("Swapchain recreation required");
+			}
+		} catch (vk::OutOfDateKHRError& _) {
+			recreateSwapchain();
+		}
 
 		currentFrame = (currentFrame + 1) % maxFrames;
 	}
@@ -106,6 +112,7 @@ namespace Graphics {
 	void Renderer::createSynchronization() {
 		vk::SemaphoreCreateInfo semaphoreCreateInfo{};
 		vk::FenceCreateInfo fenceCreateInfo{vk::FenceCreateFlagBits::eSignaled};
+
 		imageAvailableSemaphores.reserve(maxFrames);
 		renderFinishedSemaphores.reserve(maxFrames);
 		commandBufferFences.reserve(maxFrames);
@@ -160,7 +167,7 @@ namespace Graphics {
 	void Renderer::createSwapchain() {
 		uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
 		bool queuesSame = indices[0] == indices[1];
-
+		vk::SwapchainCreateInfoKHR ci {{}, surface, maxFrames, };
 		swapchain = device->createSwapchain({
 			{},
 			surface,
@@ -180,7 +187,9 @@ namespace Graphics {
 			indices,
 			device->surfaceCapabilities.currentTransform,
 			vk::CompositeAlphaFlagBitsKHR::eOpaque,
-			presentMode
+			presentMode,
+			false,
+			swapchain
 		});
 
 		images = device->getSwapchainImages(swapchain, surfaceFormat.format);
@@ -324,7 +333,6 @@ namespace Graphics {
 
 	void Renderer::createFramebuffers() {
 		vk::Extent2D windowExtent = window.getFramebufferSize();
-		std::cout << windowExtent.width << "x" << windowExtent.height << std::endl;
 		framebuffers = device->createFramebuffers({
 			{},
 			renderPass,
@@ -483,5 +491,24 @@ namespace Graphics {
 		};
 
 		graphicsPipeline = device->createGraphicsPipeline(pipelineCreateInfo);
+	}
+
+	void Renderer::recreateSwapchain() {
+		device->waitUntilIdle();
+
+		// cleanup TODO: Stop crashing on resize
+		// renderPass = vk::RenderPass{};
+		// framebuffers = std::vector<vk::Framebuffer>{};
+		// Logger::log("CLEANING UP");
+
+		surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
+		presentMode = choosePresentMode(device->presentModes);
+		extent = chooseExtent(device->surfaceCapabilities);
+		createDepthImage();// TODO (Impl in progress)
+		createSwapchain();
+		createRenderPass();
+		createFramebuffers();
+		createGraphicsPipeline();
+		createCommandBuffers();
 	}
 }

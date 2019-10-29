@@ -57,9 +57,10 @@ namespace Graphics {
 		vk::ShaderModule createShaderModule(std::vector<char> code);
 		vk::PipelineLayout createPipelineLayout(vk::PipelineLayoutCreateInfo info);
 		vk::Pipeline createGraphicsPipeline(vk::GraphicsPipelineCreateInfo info);
-		uint32_t acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore);
+		vk::ResultValue<uint32_t> acquireNextImage(vk::SwapchainKHR swapchain, vk::Semaphore semaphore);
 		void resetFence(vk::Fence fence);
 		void waitForFence(vk::Fence& fence);
+		void waitUntilIdle();
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

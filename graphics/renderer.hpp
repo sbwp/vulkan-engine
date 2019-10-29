@@ -89,6 +89,7 @@ namespace Graphics {
 		Image createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
+		void recreateSwapchain();
 	};
 }
 

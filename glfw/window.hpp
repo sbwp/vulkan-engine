@@ -17,11 +17,15 @@ namespace glfw{
         Window(int width, int height, std::string const& title);
         ~Window();
         bool shouldClose();
+        bool shouldResize();
+        void handleResize();
         vk::SurfaceKHR createSurface(vk::Instance& instance);
         vk::Extent2D getFramebufferSize();
     private:
+    	bool resized = false;
         GLFWwindow* window;
-    };
+		static void framebufferResizeCallback(GLFWwindow* c_window, int width, int height);
+	};
 
     void appendRequiredExtensions(std::vector<const char*>& extensions);
     void tick();
