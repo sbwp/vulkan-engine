@@ -13,11 +13,8 @@
 namespace Graphics {
 	class Device {
 	public:
-		Device(vk::PhysicalDevice device, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
+		Device(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
 
-		std::vector<vk::SurfaceFormatKHR> surfaceFormats;
-		std::vector<vk::PresentModeKHR> presentModes;
-		vk::SurfaceCapabilitiesKHR surfaceCapabilities;
 		bool operator<(Device& other);
 		std::vector<vk::DeviceQueueCreateInfo> getDeviceQueueCreateInfos(float* queuePriorities);
 		bool isUsable();
@@ -61,6 +58,12 @@ namespace Graphics {
 		void resetFence(vk::Fence fence);
 		void waitForFence(vk::Fence& fence);
 		void waitUntilIdle();
+		void destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers, vk::CommandPool commandPool,
+							  std::vector<vk::CommandBuffer> commandBuffers, vk::Pipeline pipeline, vk::PipelineLayout layout,
+							  vk::RenderPass renderPass, std::vector<Image> images);
+		vk::SurfaceCapabilitiesKHR getCapabilities();
+		std::vector<vk::SurfaceFormatKHR> getSurfaceFormats();
+		std::vector<vk::PresentModeKHR> getPresentModes();
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

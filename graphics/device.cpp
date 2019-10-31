@@ -8,24 +8,16 @@
 #include "image.hpp"
 
 namespace Graphics {
-	Device::Device(vk::PhysicalDevice device, vk::SurfaceKHR& surface,
-				   std::vector<char const*> const& deviceExtensions) : physicalDevice(device), surface(surface) {
-		queueFamilies = device.getQueueFamilyProperties();
+	Device::Device(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR& surface,
+				   std::vector<char const*> const& deviceExtensions) : physicalDevice(physicalDevice), surface(surface) {
+		queueFamilies = physicalDevice.getQueueFamilyProperties();
 		Logger::assertNotEmpty(queueFamilies, "Device supports no queue families.");
 
-		extensionProperties = device.enumerateDeviceExtensionProperties();
+		extensionProperties = physicalDevice.enumerateDeviceExtensionProperties();
 		Logger::assertNotEmpty(extensionProperties, "Device supports no extensions.");
 
-		surfaceCapabilities = device.getSurfaceCapabilitiesKHR(surface);
-
-		surfaceFormats = device.getSurfaceFormatsKHR(surface);
-		Logger::assertNotEmpty(surfaceFormats, "Device supports no surface formats.");
-
-		presentModes = device.getSurfacePresentModesKHR(surface);
-		Logger::assertNotEmpty(presentModes, "Device supports no present modes.");
-
-		memoryProperties = device.getMemoryProperties();
-		properties = device.getProperties();
+		memoryProperties = physicalDevice.getMemoryProperties();
+		properties = physicalDevice.getProperties();
 		graphicsQueueFamilyIndex = findGraphicsQueueFamilyIndex();
 		presentQueueFamilyIndex = findPresentQueueFamilyIndex();
 		rating = rate(deviceExtensions);
@@ -285,5 +277,36 @@ namespace Graphics {
 
 	void Device::waitUntilIdle() {
 		logicalDevice.waitIdle();
+	}
+
+	void Device::destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers, vk::CommandPool commandPool,
+								  std::vector<vk::CommandBuffer> commandBuffers, vk::Pipeline pipeline,
+								  vk::PipelineLayout layout,
+								  vk::RenderPass renderPass, std::vector<Image> images) {
+		for (auto framebuffer : framebuffers) {
+			logicalDevice.destroyFramebuffer(framebuffer);
+		}
+		logicalDevice.freeCommandBuffers(commandPool, commandBuffers);
+		logicalDevice.destroyPipeline(pipeline);
+		logicalDevice.destroyRenderPass(renderPass);
+
+		for (auto image : images) {
+			logicalDevice.destroyImageView(image.getView());
+		}
+
+		images.clear();
+		logicalDevice.destroySwapchainKHR(swapchain);
+	}
+
+	vk::SurfaceCapabilitiesKHR Device::getCapabilities() {
+		return physicalDevice.getSurfaceCapabilitiesKHR(surface);;
+	}
+
+	std::vector<vk::PresentModeKHR> Device::getPresentModes() {
+		return physicalDevice.getSurfacePresentModesKHR(surface);
+	}
+
+	std::vector<vk::SurfaceFormatKHR> Device::getSurfaceFormats() {
+		return physicalDevice.getSurfaceFormatsKHR(surface);
 	}
 }

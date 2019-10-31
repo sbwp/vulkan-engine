@@ -64,8 +64,8 @@ namespace Graphics {
 
 		const uint32_t mipLevels = 1u; // TODO acutally implement miplevels
 
-		static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats);
-		static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes);
+		static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const& supportedFormats);
+		static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR> const& supportedModes);
 
 		void run() override;
 		bool shouldContinue() override;
@@ -81,15 +81,17 @@ namespace Graphics {
 		void createFramebuffers();
 		void createTextureImage();
 		void createGraphicsPipeline();
+		void destroySwapchainAndFriends();
+		void recreateSwapchain();
 
-		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities);
+		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 
 		vk::Format chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
 										 const vk::FormatFeatureFlags& features);
 		Image createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
-		void recreateSwapchain();
+		void createSwapchainAndFriends();
 	};
 }
 

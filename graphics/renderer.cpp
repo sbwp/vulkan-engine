@@ -26,7 +26,9 @@ namespace Graphics {
 		allocator = device->createAllocator();
 		createCommandPool();
 		createSynchronization();
-		recreateSwapchain();
+
+
+		createSwapchainAndFriends();
 	}
 
 	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
@@ -34,7 +36,13 @@ namespace Graphics {
 	void Renderer::run() {
 		glfw::tick();
 		device->waitForFence(commandBufferFences[currentFrame]);
-		auto imageAcquisition = device->acquireNextImage(swapchain, imageAvailableSemaphores[currentFrame]);
+		vk::ResultValue<uint32_t> imageAcquisition(vk::Result::eSuccess, 0u);
+		try {
+			imageAcquisition = device->acquireNextImage(swapchain, imageAvailableSemaphores[currentFrame]);
+		} catch (vk::OutOfDateKHRError& error) {
+			recreateSwapchain();
+			return;
+		}
 		if (imageAcquisition.result == vk::Result::eErrorOutOfDateKHR) {
 			recreateSwapchain();
 			return;
@@ -167,7 +175,7 @@ namespace Graphics {
 	void Renderer::createSwapchain() {
 		uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
 		bool queuesSame = indices[0] == indices[1];
-		vk::SwapchainCreateInfoKHR ci {{}, surface, maxFrames, };
+
 		swapchain = device->createSwapchain({
 			{},
 			surface,
@@ -185,17 +193,15 @@ namespace Graphics {
 			? 1u
 			: 2u,
 			indices,
-			device->surfaceCapabilities.currentTransform,
+			device->getCapabilities().currentTransform,
 			vk::CompositeAlphaFlagBitsKHR::eOpaque,
-			presentMode,
-			false,
-			swapchain
+			presentMode
 		});
 
 		images = device->getSwapchainImages(swapchain, surfaceFormat.format);
 	}
 
-	vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR>& supportedFormats) {
+	vk::SurfaceFormatKHR Renderer::chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const& supportedFormats) {
 		if (supportedFormats.size() == 1 && supportedFormats[0].format == vk::Format::eUndefined) {
 			return {
 				vk::Format::eB8G8R8A8Unorm,
@@ -212,7 +218,7 @@ namespace Graphics {
 		return supportedFormats[0];
 	}
 
-	vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR>& supportedModes) {
+	vk::PresentModeKHR Renderer::choosePresentMode(std::vector<vk::PresentModeKHR> const& supportedModes) {
 		for (const auto& mode : supportedModes) {
 			if (mode == vk::PresentModeKHR::eMailbox) {
 				return mode;
@@ -222,7 +228,7 @@ namespace Graphics {
 		return vk::PresentModeKHR::eFifo;
 	}
 
-	vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
+	vk::Extent2D Renderer::chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities) {
 		if (capabilities.currentExtent.width != UINT32_MAX) {
 			return capabilities.currentExtent;
 		}
@@ -332,14 +338,13 @@ namespace Graphics {
 	}
 
 	void Renderer::createFramebuffers() {
-		vk::Extent2D windowExtent = window.getFramebufferSize();
 		framebuffers = device->createFramebuffers({
 			{},
 			renderPass,
 			2u,
 			nullptr,
-			windowExtent.width,
-			windowExtent.height,
+			extent.width,
+			extent.height,
 			1u
 		}, images, depthImage.getView());
 	}
@@ -493,22 +498,27 @@ namespace Graphics {
 		graphicsPipeline = device->createGraphicsPipeline(pipelineCreateInfo);
 	}
 
-	void Renderer::recreateSwapchain() {
-		device->waitUntilIdle();
-
-		// cleanup TODO: Stop crashing on resize
-		// renderPass = vk::RenderPass{};
-		// framebuffers = std::vector<vk::Framebuffer>{};
-		// Logger::log("CLEANING UP");
-
-		surfaceFormat = chooseSurfaceFormat(device->surfaceFormats);
-		presentMode = choosePresentMode(device->presentModes);
-		extent = chooseExtent(device->surfaceCapabilities);
-		createDepthImage();// TODO (Impl in progress)
+	void Renderer::createSwapchainAndFriends() {
+		surfaceFormat = chooseSurfaceFormat(device->getSurfaceFormats());
+		presentMode = choosePresentMode(device->getPresentModes());
+		extent = chooseExtent(device->getCapabilities());
 		createSwapchain();
+		createDepthImage();// TODO (Impl in progress)
 		createRenderPass();
 		createFramebuffers();
 		createGraphicsPipeline();
 		createCommandBuffers();
+	}
+
+	void Renderer::destroySwapchainAndFriends() {
+		device->destroySwapchain(swapchain, framebuffers, commandPool, commandBuffers, graphicsPipeline, pipelineLayout,
+			renderPass, images);
+
+	}
+
+	void Renderer::recreateSwapchain() {
+		device->waitUntilIdle();
+		destroySwapchainAndFriends();
+		createSwapchainAndFriends();
 	}
 }
