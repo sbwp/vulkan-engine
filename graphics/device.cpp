@@ -314,4 +314,8 @@ namespace Graphics {
 		auto props = physicalDevice.getProperties();
 		Logger::log("physical device: ", props.vendorID, " ", props.deviceName);
 	}
+
+	vk::DescriptorSetLayout Device::createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo const& createInfo) {
+		return logicalDevice.createDescriptorSetLayout(createInfo);
+	}
 }

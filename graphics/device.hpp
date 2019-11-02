@@ -65,6 +65,7 @@ namespace Graphics {
 		vk::SurfaceCapabilitiesKHR getCapabilities();
 		std::vector<vk::SurfaceFormatKHR> getSurfaceFormats();
 		std::vector<vk::PresentModeKHR> getPresentModes();
+		vk::DescriptorSetLayout createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo const& createInfo);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

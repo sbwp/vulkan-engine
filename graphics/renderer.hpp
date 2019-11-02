@@ -17,6 +17,7 @@
 #include "device.hpp"
 #include "image.hpp"
 #include "vertex.hpp"
+#include "buffer.hpp"
 
 namespace Graphics {
 	class Renderer: public Util::Runnable {
@@ -62,9 +63,11 @@ namespace Graphics {
 		vk::RenderPass renderPass;
 		std::vector<vk::Framebuffer> framebuffers;
 		vk::PipelineLayout pipelineLayout;
+		vk::DescriptorSetLayout descriptorSetLayout;
 		vk::Pipeline graphicsPipeline;
-		std::pair<vk::Buffer, vma::Allocation> vertexBuffer;
-		std::pair<vk::Buffer, vma::Allocation> indexBuffer;
+		Buffer vertexBuffer;
+		Buffer indexBuffer;
+		std::vector<Buffer> uniformBuffers;
 		std::vector<Vertex> vertices = {
 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 			{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -96,6 +99,9 @@ namespace Graphics {
 		void recreateSwapchain();
 		void createSwapchainAndFriends();
 		void createVertexBuffer();
+		void createIndexBuffer();
+		void createUniformBuffers();
+		void createDescriptorSetLayout();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 
@@ -105,7 +111,6 @@ namespace Graphics {
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
 		void copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size);
-		void createIndexBuffer();
 	};
 }
 

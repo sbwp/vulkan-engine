@@ -13,6 +13,7 @@
 #include "validation.hpp"
 #include "../util/algorithm.hpp"
 #include "shader.hpp"
+#include "uniform-buffer-object.hpp"
 
 namespace Graphics {
 	Renderer::Renderer(Core::Game& game): game(game), window(1820, 954, "Vulkan Engine"),
@@ -47,7 +48,8 @@ namespace Graphics {
 		if (imageAcquisition.result == vk::Result::eErrorOutOfDateKHR) {
 			recreateSwapchain();
 			return;
-		} else if (imageAcquisition.result != vk::Result::eSuccess && imageAcquisition.result != vk::Result::eSuboptimalKHR) {
+		} else if (imageAcquisition.result != vk::Result::eSuccess &&
+			imageAcquisition.result != vk::Result::eSuboptimalKHR) {
 			throw Logger::error("Swapchain image acquisition unsuccessful");
 		}
 		vk::PipelineStageFlags temp = vk::PipelineStageFlagBits::eVertexInput;
@@ -166,10 +168,10 @@ namespace Graphics {
 				{
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
 
-					vk::Buffer vertexBuffers[] = { vertexBuffer.first };
+					vk::Buffer vertexBuffers[] = {vertexBuffer};
 					vk::DeviceSize offsets[] = {0u};
 					commandBuffer.bindVertexBuffers(0u, 1u, vertexBuffers, offsets);
-					commandBuffer.bindIndexBuffer(indexBuffer.first, 0u, vk::IndexType::eUint32);
+					commandBuffer.bindIndexBuffer(indexBuffer, 0u, vk::IndexType::eUint32);
 
 					commandBuffer.drawIndexed(
 						static_cast<uint32_t>(indices.size()),
@@ -493,7 +495,12 @@ namespace Graphics {
 			&colorBlendAttachment
 		};
 
-		pipelineLayout = device->createPipelineLayout({});
+		pipelineLayout = device->createPipelineLayout({
+			{},
+			1u,
+			&descriptorSetLayout
+			// TODO: Push constants
+		});
 
 		vk::GraphicsPipelineCreateInfo pipelineCreateInfo{
 			{},
@@ -524,6 +531,8 @@ namespace Graphics {
 		createDepthImage();// TODO (Impl in progress)
 		createRenderPass();
 		createFramebuffers();
+		createUniformBuffers();
+		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createCommandBuffers();
 	}
@@ -531,7 +540,10 @@ namespace Graphics {
 	void Renderer::destroySwapchainAndFriends() {
 		device->destroySwapchain(swapchain, framebuffers, commandPool, commandBuffers, graphicsPipeline, pipelineLayout,
 			renderPass, images);
-
+		for (auto& uniformBuffer : uniformBuffers) {
+			allocator.freeMemory(uniformBuffer);
+		}
+		uniformBuffers.clear();
 	}
 
 	void Renderer::recreateSwapchain() {
@@ -541,34 +553,52 @@ namespace Graphics {
 	}
 
 	void Renderer::createVertexBuffer() {
-		vk::DeviceSize const vertexBufferSize = sizeof(vertices[0]) * vertices.size();
-		auto stagingBuffer = allocator.createBuffer({
-			{},
-			vertexBufferSize,
+		vk::DeviceSize const size = sizeof(vertices[0]) * vertices.size();
+		Buffer stagingBuffer(allocator, size,
 			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::SharingMode::eExclusive
-		}, {
-			{},
-			vma::MemoryUsage::eCpuToGpu,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
-		});
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			vma::MemoryUsage::eCpuToGpu);
 
-		vertexBuffer = allocator.createBuffer({
-			{},
-			vertexBufferSize,
+		vertexBuffer = Buffer(allocator, size,
 			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-			vk::SharingMode::eExclusive
-		}, {
-			{},
-			vma::MemoryUsage::eGpuOnly,
-			vk::MemoryPropertyFlagBits::eDeviceLocal
-		});
+			vk::MemoryPropertyFlagBits::eDeviceLocal,
+			vma::MemoryUsage::eGpuOnly);
 
-		void* mappedData = allocator.mapMemory(stagingBuffer.second);
+		void* mappedData = allocator.mapMemory(stagingBuffer);
 		memcpy(mappedData, vertices.data(), sizeof(vertices[0]) * vertices.size());
-		allocator.unmapMemory(stagingBuffer.second);
+		allocator.unmapMemory(stagingBuffer);
 
-		copyBuffer(stagingBuffer.first, vertexBuffer.first, vertexBufferSize);
+		copyBuffer(stagingBuffer, vertexBuffer, size);
+	}
+
+	void Renderer::createIndexBuffer() {
+		vk::DeviceSize size = sizeof(indices[0]) * indices.size();
+
+		Buffer stagingBuffer(allocator, size,
+			vk::BufferUsageFlagBits::eTransferSrc,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			vma::MemoryUsage::eCpuToGpu);
+
+		void* mappedData = allocator.mapMemory(stagingBuffer);
+		memcpy(mappedData, indices.data(), sizeof(indices[0]) * indices.size());
+		allocator.unmapMemory(stagingBuffer);
+
+		indexBuffer = Buffer(allocator, size,
+			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+			vk::MemoryPropertyFlagBits::eDeviceLocal, vma::MemoryUsage::eGpuOnly);
+
+		copyBuffer(stagingBuffer, indexBuffer, size);
+	}
+
+	void Renderer::createUniformBuffers() {
+		vk::DeviceSize size = sizeof(UniformBufferObject);
+
+		uniformBuffers.resize(images.size());
+		for (size_t i = 0; i < images.size(); ++i) {
+			uniformBuffers[i] = Buffer(allocator, size, vk::BufferUsageFlagBits::eUniformBuffer,
+				vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+				vma::MemoryUsage::eCpuToGpu);
+		}
 	}
 
 	void Renderer::copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size) {
@@ -577,9 +607,9 @@ namespace Graphics {
 			vk::CommandBufferLevel::ePrimary,
 			1u
 		})[0];
-		commandBuffer.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+		commandBuffer.begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
 		{
-			vk::BufferCopy copyRegion{ 0, 0, size };
+			vk::BufferCopy copyRegion{0, 0, size};
 			commandBuffer.copyBuffer(src, dst, 1u, &copyRegion);
 		}
 		commandBuffer.end();
@@ -590,35 +620,17 @@ namespace Graphics {
 		device->graphicsQueue.submit(1u, &submitInfo, vk::Fence{});
 	}
 
-	void Renderer::createIndexBuffer() {
-		vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
-
-		auto stagingBuffer = allocator.createBuffer({
+	void Renderer::createDescriptorSetLayout() {
+		vk::DescriptorSetLayoutBinding binding{
+			0u,
+			vk::DescriptorType::eUniformBuffer,
+			1u,
+			vk::ShaderStageFlagBits::eVertex
+		};
+		descriptorSetLayout = device->createDescriptorSetLayout({
 			{},
-			indexBufferSize,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::SharingMode::eExclusive
-		}, {
-			{},
-			vma::MemoryUsage::eCpuToGpu,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+			1u,
+			&binding
 		});
-
-		void* mappedData = allocator.mapMemory(stagingBuffer.second);
-		memcpy(mappedData, indices.data(), sizeof(indices[0]) * indices.size());
-		allocator.unmapMemory(stagingBuffer.second);
-
-		indexBuffer = allocator.createBuffer({
-			{},
-			indexBufferSize,
-			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-			vk::SharingMode::eExclusive
-		}, {
-			{},
-			vma::MemoryUsage::eGpuOnly,
-			vk::MemoryPropertyFlagBits::eDeviceLocal
-		});
-
-		copyBuffer(stagingBuffer.first, indexBuffer.first, indexBufferSize);
 	}
 }
