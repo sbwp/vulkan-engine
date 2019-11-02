@@ -58,6 +58,7 @@ namespace Graphics {
 		void resetFence(vk::Fence fence);
 		void waitForFence(vk::Fence& fence);
 		void waitUntilIdle();
+		void printDescription();
 		void destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers, vk::CommandPool commandPool,
 							  std::vector<vk::CommandBuffer> commandBuffers, vk::Pipeline pipeline, vk::PipelineLayout layout,
 							  vk::RenderPass renderPass, std::vector<Image> images);

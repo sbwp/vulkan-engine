@@ -309,4 +309,9 @@ namespace Graphics {
 	std::vector<vk::SurfaceFormatKHR> Device::getSurfaceFormats() {
 		return physicalDevice.getSurfaceFormatsKHR(surface);
 	}
+
+	void Device::printDescription() {
+		auto props = physicalDevice.getProperties();
+		Logger::log("physical device: ", props.vendorID, " ", props.deviceName);
+	}
 }
