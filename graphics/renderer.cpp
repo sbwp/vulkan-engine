@@ -27,7 +27,7 @@ namespace Graphics {
 		createCommandPool();
 		createSynchronization();
 
-
+		createVertexBuffer();
 		createSwapchainAndFriends();
 	}
 
@@ -152,7 +152,7 @@ namespace Graphics {
 			auto& commandBuffer = commandBuffers[i];
 			commandBuffer.begin(&beginInfo);
 			{
-				auto clearColor = Util::makeClearColor(0.0f, 1.0f, 0.0f);
+				auto clearColor = Util::makeClearColor(0.0f, 0.0f, 0.0f);
 				vk::RenderPassBeginInfo renderPassBeginInfo{
 					renderPass,
 					framebuffers[i],
@@ -164,7 +164,12 @@ namespace Graphics {
 				commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 				{
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
-					commandBuffer.draw(3, 1, 0, 0);
+
+					vk::Buffer vertexBuffers[] = { vertexBufferAllocation.first };
+					vk::DeviceSize offsets[] = {0u};
+					commandBuffer.bindVertexBuffers(0u, 1u, vertexBuffers, offsets);
+
+					commandBuffer.draw(3u, 1u, 0u, 0u);
 				}
 				commandBuffer.endRenderPass();
 			}
@@ -398,7 +403,16 @@ namespace Graphics {
 			fragmentShader.getShaderStageCreateInfo()
 		};
 
-		vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{};
+		auto bindingDescription = Vertex::getBindingDescription();
+		auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+		vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{
+			{},
+			1u,
+			&bindingDescription,
+			static_cast<uint32_t>(attributeDescriptions.size()),
+			attributeDescriptions.data()
+		};
 
 		vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo{
 			{},
@@ -520,5 +534,22 @@ namespace Graphics {
 		device->waitUntilIdle();
 		destroySwapchainAndFriends();
 		createSwapchainAndFriends();
+	}
+
+	void Renderer::createVertexBuffer() {
+		vertexBufferAllocation = allocator.createBuffer({
+			{},
+			sizeof(vertices[0]) * vertices.size(),
+			vk::BufferUsageFlagBits::eVertexBuffer,
+			vk::SharingMode::eExclusive
+		}, {
+			{},
+			vma::MemoryUsage::eCpuToGpu,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+		});
+
+		void* mappedData = allocator.mapMemory(vertexBufferAllocation.second);
+		memcpy(mappedData, vertices.data(), sizeof(vertices[0]) * vertices.size());
+		allocator.unmapMemory(vertexBufferAllocation.second);
 	}
 }

@@ -15,6 +15,7 @@
 #include "../util/runnable.hpp"
 #include "device.hpp"
 #include "image.hpp"
+#include "vertex.hpp"
 
 namespace Graphics {
 	class Renderer: public Util::Runnable {
@@ -61,6 +62,12 @@ namespace Graphics {
 		std::vector<vk::Framebuffer> framebuffers;
 		vk::PipelineLayout pipelineLayout;
 		vk::Pipeline graphicsPipeline;
+		std::vector<Vertex> vertices = {
+			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		};
+		std::pair<vk::Buffer, vma::Allocation> vertexBufferAllocation;
 
 		const uint32_t mipLevels = 1u; // TODO acutally implement miplevels
 
@@ -92,6 +99,7 @@ namespace Graphics {
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
 		void createSwapchainAndFriends();
+		void createVertexBuffer();
 	};
 }
 
