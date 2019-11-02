@@ -279,22 +279,23 @@ namespace Graphics {
 		logicalDevice.waitIdle();
 	}
 
-	void Device::destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers, vk::CommandPool commandPool,
-								  std::vector<vk::CommandBuffer> commandBuffers, vk::Pipeline pipeline,
-								  vk::PipelineLayout layout,
-								  vk::RenderPass renderPass, std::vector<Image> images) {
+	void Device::destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers,
+								  vk::CommandPool commandPool, std::vector<vk::CommandBuffer> commandBuffers,
+								  vk::Pipeline pipeline, vk::RenderPass renderPass, std::vector<Image> images,
+								  vk::DescriptorPool descriptorPool) {
 		for (auto framebuffer : framebuffers) {
 			logicalDevice.destroyFramebuffer(framebuffer);
 		}
 		logicalDevice.freeCommandBuffers(commandPool, commandBuffers);
 		logicalDevice.destroyPipeline(pipeline);
 		logicalDevice.destroyRenderPass(renderPass);
+		logicalDevice.destroyDescriptorPool(descriptorPool);
 
 		for (auto image : images) {
 			logicalDevice.destroyImageView(image.getView());
 		}
-
 		images.clear();
+
 		logicalDevice.destroySwapchainKHR(swapchain);
 	}
 
@@ -317,5 +318,23 @@ namespace Graphics {
 
 	vk::DescriptorSetLayout Device::createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo const& createInfo) {
 		return logicalDevice.createDescriptorSetLayout(createInfo);
+	}
+
+	vk::DescriptorPool Device::createDescriptorPool(vk::DescriptorType type, uint32_t size) {
+		vk::DescriptorPoolSize poolSize{ type, size };
+		return logicalDevice.createDescriptorPool({ {}, size, 1u, &poolSize });
+	}
+
+	std::vector<vk::DescriptorSet> Device::allocateDescriptorSets(vk::DescriptorPool pool,
+																  vk::DescriptorSetLayout layout,
+																  vk::DeviceSize size) {
+		std::vector<vk::DescriptorSetLayout> layouts(size, layout);
+		return logicalDevice.allocateDescriptorSets({
+			pool, static_cast<uint32_t>(layouts.size()), layouts.data()
+		});
+	}
+
+	void Device::updateDescriptorSet(vk::WriteDescriptorSet* pSet) {
+		logicalDevice.updateDescriptorSets(1u, pSet, 0u, nullptr);
 	}
 }

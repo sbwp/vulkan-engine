@@ -18,6 +18,7 @@
 #include "image.hpp"
 #include "vertex.hpp"
 #include "buffer.hpp"
+#include "uniform-buffer-object.hpp"
 
 namespace Graphics {
 	class Renderer: public Util::Runnable {
@@ -65,9 +66,14 @@ namespace Graphics {
 		vk::PipelineLayout pipelineLayout;
 		vk::DescriptorSetLayout descriptorSetLayout;
 		vk::Pipeline graphicsPipeline;
+
 		Buffer vertexBuffer;
 		Buffer indexBuffer;
 		std::vector<Buffer> uniformBuffers;
+
+		vk::DescriptorPool descriptorPool;
+		std::vector<vk::DescriptorSet> descriptorSets;
+
 		std::vector<Vertex> vertices = {
 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 			{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -75,6 +81,7 @@ namespace Graphics {
 			{{-0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}}
 		};
 		std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
+		UniformBufferObject ubo;
 
 		const uint32_t mipLevels = 1u; // TODO - actually implement miplevels
 
@@ -111,6 +118,9 @@ namespace Graphics {
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
 		void copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size);
+		void updateUniformBuffer(uint32_t index);
+		void createDescriptorPool();
+		void createDescriptorSets();
 	};
 }
 

@@ -7,6 +7,8 @@
 // #include <glm/vec4.hpp>
 // #include <glm/mat4x4.hpp>
 #include <algorithm>
+#include <chrono>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "renderer.hpp"
 #include "../logger/logger.hpp"
@@ -30,6 +32,7 @@ namespace Graphics {
 
 		createVertexBuffer();
 		createIndexBuffer();
+		createDescriptorSetLayout();
 		createSwapchainAndFriends();
 	}
 
@@ -53,6 +56,7 @@ namespace Graphics {
 			throw Logger::error("Swapchain image acquisition unsuccessful");
 		}
 		vk::PipelineStageFlags temp = vk::PipelineStageFlagBits::eVertexInput;
+		updateUniformBuffer(imageAcquisition.value);
 		vk::SubmitInfo submitInfo{
 			1u,
 			&(imageAvailableSemaphores[currentFrame]),
@@ -172,7 +176,8 @@ namespace Graphics {
 					vk::DeviceSize offsets[] = {0u};
 					commandBuffer.bindVertexBuffers(0u, 1u, vertexBuffers, offsets);
 					commandBuffer.bindIndexBuffer(indexBuffer, 0u, vk::IndexType::eUint32);
-
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout,
+						0u, 1u, &descriptorSets[i], 0u, nullptr);
 					commandBuffer.drawIndexed(
 						static_cast<uint32_t>(indices.size()),
 						1u, 0u, 0u, 0u);
@@ -450,7 +455,7 @@ namespace Graphics {
 			false,
 			vk::PolygonMode::eFill,
 			vk::CullModeFlagBits::eBack,
-			vk::FrontFace::eClockwise,
+			vk::FrontFace::eCounterClockwise,
 			false,
 			0.0f,
 			0.0f,
@@ -532,14 +537,15 @@ namespace Graphics {
 		createRenderPass();
 		createFramebuffers();
 		createUniformBuffers();
-		createDescriptorSetLayout();
+		createDescriptorPool();
+		createDescriptorSets();
 		createGraphicsPipeline();
 		createCommandBuffers();
 	}
 
 	void Renderer::destroySwapchainAndFriends() {
-		device->destroySwapchain(swapchain, framebuffers, commandPool, commandBuffers, graphicsPipeline, pipelineLayout,
-			renderPass, images);
+		device->destroySwapchain(swapchain, framebuffers, commandPool, commandBuffers, graphicsPipeline,
+			renderPass, images, descriptorPool);
 		for (auto& uniformBuffer : uniformBuffers) {
 			allocator.freeMemory(uniformBuffer);
 		}
@@ -632,5 +638,57 @@ namespace Graphics {
 			1u,
 			&binding
 		});
+	}
+
+	void Renderer::updateUniformBuffer(uint32_t index) {
+		static auto startTime = std::chrono::high_resolution_clock::now();
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+		ubo.model = glm::rotate(
+			glm::mat4(1.0f),
+			time * glm::radians(90.0f),
+			glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(
+			glm::vec3(2.0f, 2.0f, 2.0f),
+			glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.projection = glm::perspective(
+			glm::radians(45.0f),
+			static_cast<float>(extent.width) / static_cast<float>(extent.height),
+			0.1f, 10.0f);
+		ubo.projection[1][1] *= -1;
+
+		auto mappedData = allocator.mapMemory(uniformBuffers[index]);
+		memcpy(mappedData, &ubo, sizeof(ubo));
+		allocator.unmapMemory(uniformBuffers[index]);
+	}
+
+	void Renderer::createDescriptorPool() {
+		descriptorPool = device->createDescriptorPool(vk::DescriptorType::eUniformBuffer,
+			static_cast<uint32_t>(images.size()));
+	}
+
+	void Renderer::createDescriptorSets() {
+		descriptorSets = device->allocateDescriptorSets(descriptorPool, descriptorSetLayout, static_cast<uint32_t>(images.size()));
+
+		for (size_t i = 0; i < descriptorSets.size(); ++i) {
+			vk::DescriptorBufferInfo bufferInfo{
+				uniformBuffers[i],
+				0u,
+				sizeof(UniformBufferObject)
+			};
+			vk::WriteDescriptorSet descriptorWrite{
+				descriptorSets[i],
+				0u,
+				0u,
+				1u,
+				vk::DescriptorType::eUniformBuffer,
+				nullptr,
+				&bufferInfo,
+				nullptr
+			};
+
+			device->updateDescriptorSet(&descriptorWrite);
+		}
 	}
 }

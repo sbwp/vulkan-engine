@@ -59,13 +59,18 @@ namespace Graphics {
 		void waitForFence(vk::Fence& fence);
 		void waitUntilIdle();
 		void printDescription();
-		void destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers, vk::CommandPool commandPool,
-							  std::vector<vk::CommandBuffer> commandBuffers, vk::Pipeline pipeline, vk::PipelineLayout layout,
-							  vk::RenderPass renderPass, std::vector<Image> images);
+		void destroySwapchain(vk::SwapchainKHR swapchain, std::vector<vk::Framebuffer> framebuffers,
+							  vk::CommandPool commandPool, std::vector<vk::CommandBuffer> commandBuffers,
+							  vk::Pipeline pipeline, vk::RenderPass renderPass, std::vector<Image> images,
+							  vk::DescriptorPool descriptorPool);
 		vk::SurfaceCapabilitiesKHR getCapabilities();
 		std::vector<vk::SurfaceFormatKHR> getSurfaceFormats();
 		std::vector<vk::PresentModeKHR> getPresentModes();
 		vk::DescriptorSetLayout createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo const& createInfo);
+		vk::DescriptorPool createDescriptorPool(vk::DescriptorType type, uint32_t size);
+		std::vector<vk::DescriptorSet> allocateDescriptorSets(vk::DescriptorPool pool, vk::DescriptorSetLayout layout,
+															  vk::DeviceSize size);
+		void updateDescriptorSet(vk::WriteDescriptorSet* pSet);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;
