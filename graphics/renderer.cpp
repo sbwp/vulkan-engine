@@ -165,7 +165,7 @@ namespace Graphics {
 				{
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
 
-					vk::Buffer vertexBuffers[] = { vertexBufferAllocation.first };
+					vk::Buffer vertexBuffers[] = { vertexBuffer.first };
 					vk::DeviceSize offsets[] = {0u};
 					commandBuffer.bindVertexBuffers(0u, 1u, vertexBuffers, offsets);
 
@@ -537,10 +537,11 @@ namespace Graphics {
 	}
 
 	void Renderer::createVertexBuffer() {
-		vertexBufferAllocation = allocator.createBuffer({
+		vk::DeviceSize const vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+		auto stagingBuffer = allocator.createBuffer({
 			{},
-			sizeof(vertices[0]) * vertices.size(),
-			vk::BufferUsageFlagBits::eVertexBuffer,
+			vertexBufferSize,
+			vk::BufferUsageFlagBits::eTransferSrc,
 			vk::SharingMode::eExclusive
 		}, {
 			{},
@@ -548,8 +549,40 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 		});
 
-		void* mappedData = allocator.mapMemory(vertexBufferAllocation.second);
+		vertexBuffer = allocator.createBuffer({
+			{},
+			vertexBufferSize,
+			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+			vk::SharingMode::eExclusive
+		}, {
+			{},
+			vma::MemoryUsage::eGpuOnly,
+			vk::MemoryPropertyFlagBits::eDeviceLocal
+		});
+
+		void* mappedData = allocator.mapMemory(stagingBuffer.second);
 		memcpy(mappedData, vertices.data(), sizeof(vertices[0]) * vertices.size());
-		allocator.unmapMemory(vertexBufferAllocation.second);
+		allocator.unmapMemory(stagingBuffer.second);
+
+		copyBuffer(stagingBuffer.first, vertexBuffer.first, vertexBufferSize);
+	}
+
+	void Renderer::copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size) {
+		auto commandBuffer = device->allocateCommandBuffers({
+			commandPool,
+			vk::CommandBufferLevel::ePrimary,
+			1u
+		})[0];
+		commandBuffer.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+		{
+			vk::BufferCopy copyRegion{ 0, 0, size };
+			commandBuffer.copyBuffer(src, dst, 1u, &copyRegion);
+		}
+		commandBuffer.end();
+
+		vk::SubmitInfo submitInfo{
+			0u, nullptr, nullptr, 1u, &commandBuffer
+		};
+		device->graphicsQueue.submit(1u, &submitInfo, vk::Fence{});
 	}
 }

@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <vulkan/vulkan.hpp>
 #include <vma.hpp>
 
 #include "../glfw/window.hpp"
@@ -67,7 +68,7 @@ namespace Graphics {
 			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
 			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 		};
-		std::pair<vk::Buffer, vma::Allocation> vertexBufferAllocation;
+		std::pair<vk::Buffer, vma::Allocation> vertexBuffer;
 
 		const uint32_t mipLevels = 1u; // TODO acutally implement miplevels
 
@@ -90,6 +91,8 @@ namespace Graphics {
 		void createGraphicsPipeline();
 		void destroySwapchainAndFriends();
 		void recreateSwapchain();
+		void createSwapchainAndFriends();
+		void createVertexBuffer();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 
@@ -98,8 +101,7 @@ namespace Graphics {
 		Image createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
 									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
 									const vk::ImageAspectFlags& aspectFlags);
-		void createSwapchainAndFriends();
-		void createVertexBuffer();
+		void copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size);
 	};
 }
 
