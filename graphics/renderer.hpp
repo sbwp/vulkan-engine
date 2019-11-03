@@ -25,8 +25,6 @@ namespace Graphics {
 	public:
 		explicit Renderer(Core::Game& game);
 
-		~Renderer() override;
-
 	private:
 		static int const maxFrames = 2;
 		int currentFrame = 0;

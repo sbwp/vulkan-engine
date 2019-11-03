@@ -36,7 +36,26 @@ namespace Graphics {
 		createSwapchainAndFriends();
 	}
 
-	Renderer::~Renderer() = default; // Remove if nothing ends up going here.
+	void Renderer::createSwapchainAndFriends() {
+		surfaceFormat = chooseSurfaceFormat(device->getSurfaceFormats());
+		presentMode = choosePresentMode(device->getPresentModes());
+		extent = chooseExtent(device->getCapabilities());
+		createSwapchain();
+		createDepthImage();// TODO (Impl in progress)
+		createRenderPass();
+		createFramebuffers();
+		createUniformBuffers();
+		createDescriptorPool();
+		createDescriptorSets();
+		createGraphicsPipeline();
+		createCommandBuffers();
+	}
+
+	void Renderer::recreateSwapchain() {
+		device->waitUntilIdle();
+		destroySwapchainAndFriends();
+		createSwapchainAndFriends();
+	}
 
 	void Renderer::run() {
 		glfw::tick();
@@ -528,21 +547,6 @@ namespace Graphics {
 		graphicsPipeline = device->createGraphicsPipeline(pipelineCreateInfo);
 	}
 
-	void Renderer::createSwapchainAndFriends() {
-		surfaceFormat = chooseSurfaceFormat(device->getSurfaceFormats());
-		presentMode = choosePresentMode(device->getPresentModes());
-		extent = chooseExtent(device->getCapabilities());
-		createSwapchain();
-		createDepthImage();// TODO (Impl in progress)
-		createRenderPass();
-		createFramebuffers();
-		createUniformBuffers();
-		createDescriptorPool();
-		createDescriptorSets();
-		createGraphicsPipeline();
-		createCommandBuffers();
-	}
-
 	void Renderer::destroySwapchainAndFriends() {
 		device->destroySwapchain(swapchain, framebuffers, commandPool, commandBuffers, graphicsPipeline,
 			renderPass, images, descriptorPool);
@@ -552,11 +556,7 @@ namespace Graphics {
 		uniformBuffers.clear();
 	}
 
-	void Renderer::recreateSwapchain() {
-		device->waitUntilIdle();
-		destroySwapchainAndFriends();
-		createSwapchainAndFriends();
-	}
+
 
 	void Renderer::createVertexBuffer() {
 		vk::DeviceSize const size = sizeof(vertices[0]) * vertices.size();
