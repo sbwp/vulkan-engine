@@ -107,6 +107,8 @@ namespace Graphics {
 		void createIndexBuffer();
 		void createUniformBuffers();
 		void createDescriptorSetLayout();
+		void createDescriptorPool();
+		void createDescriptorSets();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 
@@ -117,8 +119,7 @@ namespace Graphics {
 									const vk::ImageAspectFlags& aspectFlags);
 		void copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size);
 		void updateUniformBuffer(uint32_t index);
-		void createDescriptorPool();
-		void createDescriptorSets();
+		void mapMemory(vma::Allocation const& allocation, void* data, size_t size);
 	};
 }
 

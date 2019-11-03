@@ -2,9 +2,9 @@
 
 rsync -ru --delete assets build
 
-if [[ ! -d build/assets/shaders ]]
+if [[ ! -d build/shaders ]]
 then
-    mkdir -p build/assets/shaders
+    mkdir -p build/shaders
 fi
-glslangValidator -V graphics/shaders/shader.vert -o build/assets/shaders/vertex.spv
-glslangValidator -V graphics/shaders/shader.frag -o build/assets/shaders/fragment.spv
+glslangValidator -V graphics/shaders/shader.vert -o build/shaders/vertex.spv
+glslangValidator -V graphics/shaders/shader.frag -o build/shaders/fragment.spv

@@ -14,22 +14,22 @@ if(CMAKE_BUILD_TYPE MATCHES DEBUG)
 endif(CMAKE_BUILD_TYPE MATCHES DEBUG)
 
 add_custom_command(
-        OUTPUT build/assets/shaders/fragment.spv
+        OUTPUT build/shaders/fragment.spv
         DEPENDS graphics/shaders/shader.frag
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMAND ./compile-shaders.sh
 )
 
 add_custom_command(
-        OUTPUT build/assets/shaders/vertex.spv
+        OUTPUT build/shaders/vertex.spv
         DEPENDS graphics/shaders/shader.vert
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMAND ./compile-shaders.sh
 )
 
-add_custom_target(shaders ALL DEPENDS build/assets/shaders/fragment.spv build/assets/shaders/vertex.spv)
+add_custom_target(shaders ALL DEPENDS build/shaders/fragment.spv build/shaders/vertex.spv)
 
-add_executable(vulkan_engine main.cpp graphics/renderer.cpp graphics/renderer.hpp logger/logger.hpp graphics/validation.cpp graphics/validation.hpp graphics/vulkan-state.cpp graphics/vulkan-state.hpp core/game.hpp util/runnable.hpp util/runnable.cpp glfw/window.cpp glfw/window.hpp graphics/device.cpp graphics/device.hpp util/algorithm.hpp logger/logger.cpp graphics/image.cpp graphics/image.hpp graphics/vma-impl.cpp includes/vma.hpp util/algorithm.cpp graphics/shader.cpp graphics/shader.hpp graphics/vertex.cpp graphics/vertex.hpp graphics/uniform-buffer-object.hpp graphics/buffer.cpp graphics/buffer.hpp)
+add_executable(vulkan_engine main.cpp graphics/renderer.cpp graphics/renderer.hpp logger/logger.hpp graphics/validation.cpp graphics/validation.hpp graphics/vulkan-state.cpp graphics/vulkan-state.hpp core/game.hpp util/runnable.hpp util/runnable.cpp glfw/window.cpp glfw/window.hpp graphics/device.cpp graphics/device.hpp util/algorithm.hpp logger/logger.cpp graphics/image.cpp graphics/image.hpp graphics/vma-impl.cpp includes/vma.hpp util/algorithm.cpp graphics/shader.cpp graphics/shader.hpp graphics/vertex.cpp graphics/vertex.hpp graphics/uniform-buffer-object.hpp graphics/buffer.cpp graphics/buffer.hpp graphics/texture.cpp graphics/texture.hpp)
 
 add_dependencies(vulkan_engine shaders)
 

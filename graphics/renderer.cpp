@@ -7,7 +7,9 @@
 // #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
+
 #include <stb_image.h>
 #include <algorithm>
 #include <chrono>
@@ -424,7 +426,21 @@ namespace Graphics {
 	}
 
 	void Renderer::createTextureImage() {
+		int width, height, channels;
+		stbi_uc* pixels = stbi_load("../assets/images/sabrina.jpg", &width, &height, &channels, STBI_rgb_alpha);
+		vk::DeviceSize imageSize = width * height * 4;
 
+		if (!pixels) {
+			throw Logger::error("Failed to load image");
+		}
+
+		auto stagingBuffer = Buffer(allocator, imageSize, vk::BufferUsageFlagBits::eTransferSrc,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			vma::MemoryUsage::eCpuToGpu);
+
+		mapMemory(stagingBuffer, pixels, static_cast<size_t>(imageSize));
+
+		stbi_image_free(pixels);
 	}
 
 	void Renderer::createGraphicsPipeline() {
@@ -559,8 +575,6 @@ namespace Graphics {
 		uniformBuffers.clear();
 	}
 
-
-
 	void Renderer::createVertexBuffer() {
 		vk::DeviceSize const size = sizeof(vertices[0]) * vertices.size();
 		Buffer stagingBuffer(allocator, size,
@@ -573,9 +587,7 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eDeviceLocal,
 			vma::MemoryUsage::eGpuOnly);
 
-		void* mappedData = allocator.mapMemory(stagingBuffer);
-		memcpy(mappedData, vertices.data(), sizeof(vertices[0]) * vertices.size());
-		allocator.unmapMemory(stagingBuffer);
+		mapMemory(stagingBuffer, vertices.data(), sizeof(vertices[0]) * vertices.size());
 
 		copyBuffer(stagingBuffer, vertexBuffer, size);
 	}
@@ -588,9 +600,7 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 			vma::MemoryUsage::eCpuToGpu);
 
-		void* mappedData = allocator.mapMemory(stagingBuffer);
-		memcpy(mappedData, indices.data(), sizeof(indices[0]) * indices.size());
-		allocator.unmapMemory(stagingBuffer);
+		mapMemory(stagingBuffer, indices.data(), sizeof(indices[0]) * indices.size());
 
 		indexBuffer = Buffer(allocator, size,
 			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
@@ -661,9 +671,7 @@ namespace Graphics {
 			0.1f, 10.0f);
 		ubo.projection[1][1] *= -1;
 
-		auto mappedData = allocator.mapMemory(uniformBuffers[index]);
-		memcpy(mappedData, &ubo, sizeof(ubo));
-		allocator.unmapMemory(uniformBuffers[index]);
+		mapMemory(uniformBuffers[index], &ubo, sizeof(ubo));
 	}
 
 	void Renderer::createDescriptorPool() {
@@ -672,7 +680,8 @@ namespace Graphics {
 	}
 
 	void Renderer::createDescriptorSets() {
-		descriptorSets = device->allocateDescriptorSets(descriptorPool, descriptorSetLayout, static_cast<uint32_t>(images.size()));
+		descriptorSets = device
+			->allocateDescriptorSets(descriptorPool, descriptorSetLayout, static_cast<uint32_t>(images.size()));
 
 		for (size_t i = 0; i < descriptorSets.size(); ++i) {
 			vk::DescriptorBufferInfo bufferInfo{
@@ -693,5 +702,11 @@ namespace Graphics {
 
 			device->updateDescriptorSet(&descriptorWrite);
 		}
+	}
+
+	void Renderer::mapMemory(vma::Allocation const& allocation, void* data, size_t size) {
+		auto mappedMemory = allocator.mapMemory(allocation);
+		memcpy(mappedMemory, data, size);
+		allocator.unmapMemory(allocation);
 	}
 }
