@@ -8,22 +8,27 @@
 #include <optional>
 #include <vulkan/vulkan.hpp>
 #include <vma.hpp>
+#include "device.hpp"
 
 namespace Graphics {
 	class Image {
 	public:
 		Image() = default;
-		Image (vk::Image image, vk::ImageView view, vma::Allocation allocation);
-		Image (vk::Image image, vk::ImageView view);
+		Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, vk::Format format,
+			  vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage, vk::ImageAspectFlags const& aspectMask,
+			  vma::MemoryUsage memoryUsage);
+		Image(vk::Image image, vk::ImageView view, vma::Allocation allocation);
+		Image(vk::Image image, vk::ImageView view);
 		~Image();
 
 		vk::ImageView getView();
 		vk::ImageView* setupAttachments(vk::ImageView depthImageView);
+		operator vk::Image(); // NOLINT
 	private:
 		vk::Image image;
 		vk::ImageView view;
 		std::optional<vma::Allocation> allocation;
-		vk::ImageView* attachments;
+		vk::ImageView* attachments{};
 	};
 }
 #endif //VULKAN_ENGINE_IMAGE_HPP

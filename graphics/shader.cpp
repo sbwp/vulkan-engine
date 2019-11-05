@@ -10,7 +10,7 @@ namespace Graphics {
 		code{loadShaderCode(shaderName)}, shaderModule{device->createShaderModule(code)}, stage(stage) {}
 
 	std::vector<char> Shader::loadShaderCode(std::string const& shaderName) {
-		return Util::readFile("assets/shaders/" + shaderName + ".spv");
+		return Util::readFile("shaders/" + shaderName + ".spv");
 	}
 
 	vk::PipelineShaderStageCreateInfo Shader::getShaderStageCreateInfo() {

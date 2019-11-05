@@ -64,6 +64,7 @@ namespace Graphics {
 		vk::PipelineLayout pipelineLayout;
 		vk::DescriptorSetLayout descriptorSetLayout;
 		vk::Pipeline graphicsPipeline;
+		Image textureImage;
 
 		Buffer vertexBuffer;
 		Buffer indexBuffer;
@@ -114,12 +115,12 @@ namespace Graphics {
 
 		vk::Format chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
 										 const vk::FormatFeatureFlags& features);
-		Image createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
-									vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
-									const vk::ImageAspectFlags& aspectFlags);
 		void copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size);
 		void updateUniformBuffer(uint32_t index);
-		void mapMemory(vma::Allocation const& allocation, void* data, size_t size);
+		void copyMemory(vma::Allocation const& allocation, void* data, size_t size);
+		void runCommand(std::function<void(vk::CommandBuffer)> const& callback);
+		void transitionImageLayout(Image& image, vk::Format const& format, vk::ImageLayout const& from, vk::ImageLayout const& to);
+		void copyBufferToImage(Buffer& buffer, Image& image, uint32_t width, uint32_t height);
 	};
 }
 

@@ -290,9 +290,9 @@ namespace Graphics {
 		depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
-		depthImage = createImage(depthFormat, extent, vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			vk::MemoryPropertyFlagBits::eDeviceLocal, vk::ImageAspectFlagBits::eDepth);
+		depthImage = Image(allocator, device, extent.width, extent.height, depthFormat, vk::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth,
+			vma::MemoryUsage::eGpuOnly);
 	}
 
 	vk::Format Renderer::chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
@@ -389,45 +389,9 @@ namespace Graphics {
 		}, images, depthImage.getView());
 	}
 
-	Image Renderer::createImage(vk::Format format, vk::Extent2D extent, vk::ImageTiling tiling,
-								vk::ImageUsageFlagBits usageFlags, vk::MemoryPropertyFlagBits memoryPropertyFlags,
-								const vk::ImageAspectFlags& aspectFlags) {
-		auto imageAllocation = allocator.createImage({
-			{},
-			vk::ImageType::e2D,
-			format,
-			{extent.width, extent.height, 1u},
-			mipLevels,
-			1u,
-			vk::SampleCountFlagBits::e1,
-			tiling,
-			usageFlags
-		}, {
-			{},
-			vma::MemoryUsage::eGpuOnly
-		});
-
-		auto imageView = device->createImageView({
-			{},
-			imageAllocation.first,
-			vk::ImageViewType::e2D,
-			depthFormat,
-			{},
-			{
-				vk::ImageAspectFlagBits::eDepth,
-				0u,
-				mipLevels,
-				0u,
-				1u
-			}
-		});
-
-		return Image(imageAllocation.first, imageView, imageAllocation.second);
-	}
-
 	void Renderer::createTextureImage() {
 		int width, height, channels;
-		stbi_uc* pixels = stbi_load("../assets/images/sabrina.jpg", &width, &height, &channels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load("../assets/images/wizard.jpg", &width, &height, &channels, STBI_rgb_alpha);
 		vk::DeviceSize imageSize = width * height * 4;
 
 		if (!pixels) {
@@ -438,9 +402,18 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 			vma::MemoryUsage::eCpuToGpu);
 
-		mapMemory(stagingBuffer, pixels, static_cast<size_t>(imageSize));
+		copyMemory(stagingBuffer, pixels, static_cast<size_t>(imageSize));
 
 		stbi_image_free(pixels);
+
+		textureImage = Image(allocator, device, static_cast<uint32_t>(width), static_cast<uint32_t>(height),
+			vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::ImageAspectFlagBits::eColor,
+			vma::MemoryUsage::eGpuOnly);
+
+		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eTransferDstOptimal);
+		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 	}
 
 	void Renderer::createGraphicsPipeline() {
@@ -587,7 +560,7 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eDeviceLocal,
 			vma::MemoryUsage::eGpuOnly);
 
-		mapMemory(stagingBuffer, vertices.data(), sizeof(vertices[0]) * vertices.size());
+		copyMemory(stagingBuffer, vertices.data(), sizeof(vertices[0]) * vertices.size());
 
 		copyBuffer(stagingBuffer, vertexBuffer, size);
 	}
@@ -600,7 +573,7 @@ namespace Graphics {
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 			vma::MemoryUsage::eCpuToGpu);
 
-		mapMemory(stagingBuffer, indices.data(), sizeof(indices[0]) * indices.size());
+		copyMemory(stagingBuffer, indices.data(), sizeof(indices[0]) * indices.size());
 
 		indexBuffer = Buffer(allocator, size,
 			vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
@@ -621,22 +594,10 @@ namespace Graphics {
 	}
 
 	void Renderer::copyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size) {
-		auto commandBuffer = device->allocateCommandBuffers({
-			commandPool,
-			vk::CommandBufferLevel::ePrimary,
-			1u
-		})[0];
-		commandBuffer.begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-		{
+		runCommand([&](vk::CommandBuffer const& commandBuffer) {
 			vk::BufferCopy copyRegion{0, 0, size};
 			commandBuffer.copyBuffer(src, dst, 1u, &copyRegion);
-		}
-		commandBuffer.end();
-
-		vk::SubmitInfo submitInfo{
-			0u, nullptr, nullptr, 1u, &commandBuffer
-		};
-		device->graphicsQueue.submit(1u, &submitInfo, vk::Fence{});
+		});
 	}
 
 	void Renderer::createDescriptorSetLayout() {
@@ -671,7 +632,7 @@ namespace Graphics {
 			0.1f, 10.0f);
 		ubo.projection[1][1] *= -1;
 
-		mapMemory(uniformBuffers[index], &ubo, sizeof(ubo));
+		copyMemory(uniformBuffers[index], &ubo, sizeof(ubo));
 	}
 
 	void Renderer::createDescriptorPool() {
@@ -704,9 +665,54 @@ namespace Graphics {
 		}
 	}
 
-	void Renderer::mapMemory(vma::Allocation const& allocation, void* data, size_t size) {
+	void Renderer::copyMemory(vma::Allocation const& allocation, void* data, size_t size) {
 		auto mappedMemory = allocator.mapMemory(allocation);
 		memcpy(mappedMemory, data, size);
 		allocator.unmapMemory(allocation);
+	}
+
+	void Renderer::runCommand(std::function<void(vk::CommandBuffer)> const& callback) {
+		auto commandBuffer = device->allocateCommandBuffers({
+			commandPool,
+			vk::CommandBufferLevel::ePrimary,
+			1u
+		})[0];
+		commandBuffer.begin({vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+		callback(commandBuffer);
+		commandBuffer.end();
+
+		vk::SubmitInfo submitInfo{
+			0u, nullptr, nullptr, 1u, &commandBuffer
+		};
+		device->graphicsQueue.submit(1u, &submitInfo, vk::Fence{});
+	}
+
+	void Renderer::transitionImageLayout(Image& image, vk::Format const& format, vk::ImageLayout const& from,
+										 vk::ImageLayout const& to) {
+		runCommand([&](vk::CommandBuffer const& commandBuffer) {
+			vk::ImageMemoryBarrier barrier{
+				{}, {},
+				from, to,
+				0u, 0u,
+				image,
+				{vk::ImageAspectFlagBits::eColor, 0u, 1u, 0u, 1u}
+			};
+			commandBuffer.pipelineBarrier({}, {}, {},
+				0u, nullptr,
+				0u, nullptr,
+				1u, &barrier);
+		});
+	}
+
+	void Renderer::copyBufferToImage(Buffer& buffer, Image& image, uint32_t width, uint32_t height) {
+		runCommand([&](vk::CommandBuffer const& commandBuffer) {
+			vk::BufferImageCopy copy{
+				0u, 0u, 0u,
+				{vk::ImageAspectFlagBits::eColor, 0u, 0u, 1u},
+				{0u, 0u, 0u},
+				{width, height, 1u}
+			};
+			commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1u, &copy);
+		});
 	}
 }

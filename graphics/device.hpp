@@ -8,9 +8,9 @@
 #include <vulkan/vulkan.hpp>
 #include <vma.hpp>
 #include <optional>
-#include "image.hpp"
 
 namespace Graphics {
+	class Image;
 	class Device {
 	public:
 		Device(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR& surface, std::vector<char const*> const& deviceExtensions);
