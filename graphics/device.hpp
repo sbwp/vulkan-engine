@@ -67,10 +67,10 @@ namespace Graphics {
 		std::vector<vk::SurfaceFormatKHR> getSurfaceFormats();
 		std::vector<vk::PresentModeKHR> getPresentModes();
 		vk::DescriptorSetLayout createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo const& createInfo);
-		vk::DescriptorPool createDescriptorPool(vk::DescriptorType type, uint32_t size);
+		vk::DescriptorPool createDescriptorPool(uint32_t size);
 		std::vector<vk::DescriptorSet> allocateDescriptorSets(vk::DescriptorPool pool, vk::DescriptorSetLayout layout,
 															  vk::DeviceSize size);
-		void updateDescriptorSet(vk::WriteDescriptorSet* pSet);
+		void updateDescriptorSets(std::vector<vk::WriteDescriptorSet> sets);
 		vk::Sampler createSampler(vk::SamplerCreateInfo const& createInfo);
 	private:
 		vk::PhysicalDevice physicalDevice;

@@ -388,7 +388,7 @@ namespace Graphics {
 			extent.width,
 			extent.height,
 			1u
-		}, images, depthImage.getView());
+		}, images, depthImage);
 	}
 
 	void Renderer::createTextureImage() {
@@ -416,6 +416,8 @@ namespace Graphics {
 		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eUndefined,
 			vk::ImageLayout::eTransferDstOptimal);
 		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eTransferDstOptimal,
+			vk::ImageLayout::eShaderReadOnlyOptimal);
 	}
 
 	void Renderer::createGraphicsPipeline() {
@@ -603,16 +605,24 @@ namespace Graphics {
 	}
 
 	void Renderer::createDescriptorSetLayout() {
-		vk::DescriptorSetLayoutBinding binding{
-			0u,
-			vk::DescriptorType::eUniformBuffer,
-			1u,
-			vk::ShaderStageFlagBits::eVertex
+		std::vector<vk::DescriptorSetLayoutBinding> bindings{
+			{
+				0u,
+				vk::DescriptorType::eUniformBuffer,
+				1u,
+				vk::ShaderStageFlagBits::eVertex
+			},
+			{
+				1u,
+				vk::DescriptorType::eCombinedImageSampler,
+				1u,
+				vk::ShaderStageFlagBits::eFragment
+			}
 		};
 		descriptorSetLayout = device->createDescriptorSetLayout({
 			{},
-			1u,
-			&binding
+			static_cast<uint32_t>(bindings.size()),
+			bindings.data()
 		});
 	}
 
@@ -638,7 +648,7 @@ namespace Graphics {
 	}
 
 	void Renderer::createDescriptorPool() {
-		descriptorPool = device->createDescriptorPool(vk::DescriptorType::eUniformBuffer,
+		descriptorPool = device->createDescriptorPool(
 			static_cast<uint32_t>(images.size()));
 	}
 
@@ -652,18 +662,35 @@ namespace Graphics {
 				0u,
 				sizeof(UniformBufferObject)
 			};
-			vk::WriteDescriptorSet descriptorWrite{
-				descriptorSets[i],
-				0u,
-				0u,
-				1u,
-				vk::DescriptorType::eUniformBuffer,
-				nullptr,
-				&bufferInfo,
-				nullptr
+			vk::DescriptorImageInfo imageInfo{
+				textureSampler,
+				textureImage,
+				vk::ImageLayout::eShaderReadOnlyOptimal
+			};
+			std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
+				{
+					descriptorSets[i],
+					0u,
+					0u,
+					1u,
+					vk::DescriptorType::eUniformBuffer,
+					nullptr,
+					&bufferInfo,
+					nullptr
+				},
+				{
+					descriptorSets[i],
+					1u,
+					0u,
+					1u,
+					vk::DescriptorType::eCombinedImageSampler,
+					&imageInfo,
+					nullptr,
+					nullptr
+				}
 			};
 
-			device->updateDescriptorSet(&descriptorWrite);
+			device->updateDescriptorSets(writeDescriptorSets);
 		}
 	}
 

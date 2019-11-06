@@ -12,23 +12,6 @@ namespace Graphics {
 	Image::Image(vk::Image image, vk::ImageView view)
 		: image(image), view(view) {}
 
-	vk::ImageView Image::getView() {
-		return view;
-	}
-
-	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView) {
-		attachments = new vk::ImageView[2]{
-			view,
-			depthImageView
-		};
-
-		return attachments;
-	}
-
-	Image::~Image() {
-		delete[] attachments;
-	}
-
 	Image::Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, vk::Format format,
 				 vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage, vk::ImageAspectFlags const& aspectMask,
 				 vma::MemoryUsage memoryUsage) {
@@ -58,7 +41,24 @@ namespace Graphics {
 		});
 	}
 
+	Image::~Image() {
+		delete[] attachments;
+	}
+
 	Image::operator vk::Image() {
 		return image;
+	}
+
+	Image::operator vk::ImageView() {
+		return view;
+	}
+
+	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView) {
+		attachments = new vk::ImageView[2]{
+			view,
+			depthImageView
+		};
+
+		return attachments;
 	}
 }

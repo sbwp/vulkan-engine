@@ -292,7 +292,7 @@ namespace Graphics {
 		logicalDevice.destroyDescriptorPool(descriptorPool);
 
 		for (auto image : images) {
-			logicalDevice.destroyImageView(image.getView());
+			logicalDevice.destroyImageView(image);
 		}
 		images.clear();
 
@@ -320,9 +320,12 @@ namespace Graphics {
 		return logicalDevice.createDescriptorSetLayout(createInfo);
 	}
 
-	vk::DescriptorPool Device::createDescriptorPool(vk::DescriptorType type, uint32_t size) {
-		vk::DescriptorPoolSize poolSize{ type, size };
-		return logicalDevice.createDescriptorPool({ {}, size, 1u, &poolSize });
+	vk::DescriptorPool Device::createDescriptorPool(uint32_t size) {
+		std::vector<vk::DescriptorPoolSize> poolSizes{
+			{vk::DescriptorType::eUniformBuffer, size},
+			{vk::DescriptorType::eCombinedImageSampler, size}
+		};
+		return logicalDevice.createDescriptorPool({{}, size, static_cast<uint32_t>(poolSizes.size()), poolSizes.data()});
 	}
 
 	std::vector<vk::DescriptorSet> Device::allocateDescriptorSets(vk::DescriptorPool pool,
@@ -334,8 +337,8 @@ namespace Graphics {
 		});
 	}
 
-	void Device::updateDescriptorSet(vk::WriteDescriptorSet* pSet) {
-		logicalDevice.updateDescriptorSets(1u, pSet, 0u, nullptr);
+	void Device::updateDescriptorSets(std::vector<vk::WriteDescriptorSet> sets) {
+		logicalDevice.updateDescriptorSets(static_cast<uint32_t>(sets.size()), sets.data(), 0u, nullptr);
 	}
 
 	vk::Sampler Device::createSampler(vk::SamplerCreateInfo const& createInfo) {

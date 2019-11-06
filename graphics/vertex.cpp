@@ -13,10 +13,11 @@ namespace Graphics {
 		};
 	}
 
-	std::array<vk::VertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions() {
-		return std::array<vk::VertexInputAttributeDescription, 2>{{
+	std::array<vk::VertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
+		return std::array<vk::VertexInputAttributeDescription, 3>{{
 			{0u, 0u, vk::Format::eR32G32Sfloat, 0u},
-			{1u, 0u, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color)}
+			{1u, 0u, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color)},
+			{2u, 0u, vk::Format::eR32G32Sfloat, offsetof(Vertex, texCoord)}
 		}};
 	}
 }
