@@ -71,6 +71,7 @@ namespace Graphics {
 		std::vector<vk::DescriptorSet> allocateDescriptorSets(vk::DescriptorPool pool, vk::DescriptorSetLayout layout,
 															  vk::DeviceSize size);
 		void updateDescriptorSet(vk::WriteDescriptorSet* pSet);
+		vk::Sampler createSampler(vk::SamplerCreateInfo const& createInfo);
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;

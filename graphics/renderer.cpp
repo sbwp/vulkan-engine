@@ -23,7 +23,8 @@
 
 namespace Graphics {
 	Renderer::Renderer(Core::Game& game): game(game), window(1820, 954, "Vulkan Engine"),
-										  presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined) {
+										  presentMode(vk::PresentModeKHR::eFifo), depthFormat(vk::Format::eUndefined),
+										  ubo{} {
 		glfw::appendRequiredExtensions(instanceExtensions);
 		setupValidationLayers(instanceExtensions, validationLayers);
 		createInstance();
@@ -33,6 +34,7 @@ namespace Graphics {
 		allocator = device->createAllocator();
 		createCommandPool();
 		createTextureImage();
+		createTextureSampler();
 		createSynchronization();
 
 		createVertexBuffer();
@@ -213,8 +215,8 @@ namespace Graphics {
 	}
 
 	void Renderer::createSwapchain() {
-		uint32_t indices[] = {device->graphicsIndex(), device->presentIndex()};
-		bool queuesSame = indices[0] == indices[1];
+		uint32_t queueIndices[] = {device->graphicsIndex(), device->presentIndex()};
+		bool queuesSame = queueIndices[0] == queueIndices[1];
 
 		swapchain = device->createSwapchain({
 			{},
@@ -232,7 +234,7 @@ namespace Graphics {
 			queuesSame
 			? 1u
 			: 2u,
-			indices,
+			queueIndices,
 			device->getCapabilities().currentTransform,
 			vk::CompositeAlphaFlagBitsKHR::eOpaque,
 			presentMode
@@ -691,13 +693,13 @@ namespace Graphics {
 										 vk::ImageLayout const& to) {
 		runCommand([&](vk::CommandBuffer const& commandBuffer) {
 			vk::ImageMemoryBarrier barrier{
-				{}, {},
+				accessMaskForLayout(from), accessMaskForLayout(to),
 				from, to,
 				0u, 0u,
 				image,
 				{vk::ImageAspectFlagBits::eColor, 0u, 1u, 0u, 1u}
 			};
-			commandBuffer.pipelineBarrier({}, {}, {},
+			commandBuffer.pipelineBarrier(pipelineStageForLayout(from), pipelineStageForLayout(to), {},
 				0u, nullptr,
 				0u, nullptr,
 				1u, &barrier);
@@ -713,6 +715,44 @@ namespace Graphics {
 				{width, height, 1u}
 			};
 			commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1u, &copy);
+		});
+	}
+
+	vk::AccessFlags Renderer::accessMaskForLayout(vk::ImageLayout const& layout) {
+		switch (layout) {
+			case vk::ImageLayout::eTransferDstOptimal:
+				return vk::AccessFlagBits::eTransferWrite;
+			case vk::ImageLayout::eShaderReadOnlyOptimal:
+				return vk::AccessFlagBits::eShaderRead;
+			default:
+				return vk::AccessFlags{};
+		}
+	}
+
+	vk::PipelineStageFlags Renderer::pipelineStageForLayout(vk::ImageLayout const& layout) {
+		switch (layout) {
+			case vk::ImageLayout::eUndefined:
+				return vk::PipelineStageFlagBits::eTopOfPipe;
+			case vk::ImageLayout::eTransferDstOptimal:
+				return vk::PipelineStageFlagBits::eTransfer;
+			case vk::ImageLayout::eShaderReadOnlyOptimal:
+				return vk::PipelineStageFlagBits::eFragmentShader;
+			default:
+				return vk::PipelineStageFlags{};
+		}
+	}
+
+	void Renderer::createTextureSampler() {
+		textureSampler = device->createSampler({
+			{},
+			vk::Filter::eLinear,
+			vk::Filter::eLinear,
+			vk::SamplerMipmapMode::eNearest,
+			vk::SamplerAddressMode::eRepeat,
+			vk::SamplerAddressMode::eRepeat,
+			vk::SamplerAddressMode::eRepeat,
+			0.0f, true, 16.0f, false, vk::CompareOp::eAlways,
+			0.0f, 0.0f, vk::BorderColor::eIntOpaqueBlack, false
 		});
 	}
 }

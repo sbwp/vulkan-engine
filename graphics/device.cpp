@@ -98,7 +98,7 @@ namespace Graphics {
 		auto queueCreateInfos = getDeviceQueueCreateInfos(&queuePriority);
 
 		vk::PhysicalDeviceFeatures deviceFeatures{};
-		// deviceFeatures.whatever = true; // Get rid of this comment once there is one to use as an example.
+		deviceFeatures.samplerAnisotropy = true;
 
 		logicalDevice = physicalDevice.createDevice({
 			{},
@@ -336,5 +336,9 @@ namespace Graphics {
 
 	void Device::updateDescriptorSet(vk::WriteDescriptorSet* pSet) {
 		logicalDevice.updateDescriptorSets(1u, pSet, 0u, nullptr);
+	}
+
+	vk::Sampler Device::createSampler(vk::SamplerCreateInfo const& createInfo) {
+		return logicalDevice.createSampler(createInfo);
 	}
 }

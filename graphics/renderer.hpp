@@ -65,6 +65,7 @@ namespace Graphics {
 		vk::DescriptorSetLayout descriptorSetLayout;
 		vk::Pipeline graphicsPipeline;
 		Image textureImage;
+		vk::Sampler textureSampler;
 
 		Buffer vertexBuffer;
 		Buffer indexBuffer;
@@ -110,6 +111,7 @@ namespace Graphics {
 		void createDescriptorSetLayout();
 		void createDescriptorPool();
 		void createDescriptorSets();
+		void createTextureSampler();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 
@@ -121,6 +123,8 @@ namespace Graphics {
 		void runCommand(std::function<void(vk::CommandBuffer)> const& callback);
 		void transitionImageLayout(Image& image, vk::Format const& format, vk::ImageLayout const& from, vk::ImageLayout const& to);
 		void copyBufferToImage(Buffer& buffer, Image& image, uint32_t width, uint32_t height);
+		static vk::AccessFlags accessMaskForLayout(vk::ImageLayout const& layout);
+		static vk::PipelineStageFlags pipelineStageForLayout(vk::ImageLayout const& layout);
 	};
 }
 
