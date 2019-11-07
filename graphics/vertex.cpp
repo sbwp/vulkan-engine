@@ -20,4 +20,7 @@ namespace Graphics {
 			{2u, 0u, vk::Format::eR32G32Sfloat, offsetof(Vertex, texCoord)}
 		}};
 	}
+
+	Vertex::Vertex(glm::vec3 position, glm::vec3 color, glm::vec2 texCoord): position(position), color(color),
+																			 texCoord(texCoord) {}
 }

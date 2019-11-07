@@ -14,6 +14,8 @@ namespace Graphics {
 		glm::vec3 color;
 		glm::vec2 texCoord;
 
+		Vertex(glm::vec3 position, glm::vec3 color, glm::vec2 texCoord);
+
 		static vk::VertexInputBindingDescription getBindingDescription();
 
 		static std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions();

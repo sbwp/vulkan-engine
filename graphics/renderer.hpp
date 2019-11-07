@@ -74,21 +74,8 @@ namespace Graphics {
 		vk::DescriptorPool descriptorPool;
 		std::vector<vk::DescriptorSet> descriptorSets;
 
-		std::vector<Vertex> vertices = {
-			{{-0.5f, -0.5f, 0.0f},  {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-			{{0.5f,  -0.5f, 0.0f},  {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-			{{0.5f,  0.5f,  0.0f},  {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-			{{-0.5f, 0.5f,  0.0f},  {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-			{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-			{{0.5f,  -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-			{{0.5f,  0.5f,  -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-			{{-0.5f, 0.5f,  -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-		};
-		std::vector<uint32_t> indices = {
-			0, 1, 2, 2, 3, 0,
-			4, 5, 6, 6, 7, 4
-		};
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
 		UniformBufferObject ubo;
 
 		const uint32_t mipLevels = 1u; // TODO - actually implement miplevels
@@ -120,6 +107,7 @@ namespace Graphics {
 		void createDescriptorPool();
 		void createDescriptorSets();
 		void createTextureSampler();
+		void loadModel();
 
 		vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR const& capabilities);
 

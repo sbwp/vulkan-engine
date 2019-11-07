@@ -42,6 +42,7 @@ namespace Graphics {
 		createTextureSampler();
 		createSynchronization();
 
+		loadModel();
 		createVertexBuffer();
 		createIndexBuffer();
 		createDescriptorSetLayout();
@@ -811,6 +812,34 @@ namespace Graphics {
 			}
 		} else {
 			return vk::ImageAspectFlagBits::eColor;
+		}
+	}
+
+	// TODO: Pull out into separate model/mesh class
+	void Renderer::loadModel() {
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string warn, err;
+		static std::string const path = "../assets/models/chalet.obj";
+		Logger::assertTrue(tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()),
+			"Failed to load object: " + warn + err);
+		for (const auto& shape : shapes) {
+			for (const auto& index : shape.mesh.indices) {
+				vertices.emplace_back(
+					glm::vec3{
+						attrib.vertices[3 * index.vertex_index + 0],
+						attrib.vertices[3 * index.vertex_index + 1],
+					    attrib.vertices[3 * index.vertex_index + 2]
+					},
+					glm::vec3{ 1.0f, 1.0f, 1.0f },
+					glm::vec2{
+						attrib.texcoords[2 * index.texcoord_index + 0],
+						1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+					}
+				);
+				indices.push_back(indices.size()); // TODO: Move vertices to unordered_map to remove duplicates
+			}
 		}
 	}
 }
