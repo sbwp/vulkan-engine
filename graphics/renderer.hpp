@@ -75,12 +75,20 @@ namespace Graphics {
 		std::vector<vk::DescriptorSet> descriptorSets;
 
 		std::vector<Vertex> vertices = {
-			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-			{{0.5f,  0.5f},  {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-			{{-0.5f, 0.5f},  {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+			{{-0.5f, -0.5f, 0.0f},  {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+			{{0.5f,  -0.5f, 0.0f},  {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{0.5f,  0.5f,  0.0f},  {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+			{{-0.5f, 0.5f,  0.0f},  {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+			{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+			{{0.5f,  -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{0.5f,  0.5f,  -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+			{{-0.5f, 0.5f,  -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 		};
-		std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
+		std::vector<uint32_t> indices = {
+			0, 1, 2, 2, 3, 0,
+			4, 5, 6, 6, 7, 4
+		};
 		UniformBufferObject ubo;
 
 		const uint32_t mipLevels = 1u; // TODO - actually implement miplevels
@@ -125,6 +133,7 @@ namespace Graphics {
 		void copyBufferToImage(Buffer& buffer, Image& image, uint32_t width, uint32_t height);
 		static vk::AccessFlags accessMaskForLayout(vk::ImageLayout const& layout);
 		static vk::PipelineStageFlags pipelineStageForLayout(vk::ImageLayout const& layout);
+		static vk::ImageAspectFlags aspectMaskForLayoutAndFormat(vk::ImageLayout const& layout, vk::Format const& format);
 	};
 }
 

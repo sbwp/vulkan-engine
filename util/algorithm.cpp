@@ -28,4 +28,12 @@ namespace Util {
 	vk::ClearValue makeClearColor(float r, float g, float b) {
 		return makeClearColor(r, g, b, 1.0f);
 	}
+
+	vk::ClearValue makeClearDepthStencil(float depth, uint32_t stencil) {
+		return vk::ClearValue{vk::ClearDepthStencilValue{depth, stencil}};
+	}
+
+	bool doesFormatSupportStencil(vk::Format const& format) {
+		return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
+	}
 }

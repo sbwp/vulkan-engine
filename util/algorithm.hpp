@@ -36,6 +36,10 @@ namespace Util {
     vk::ClearValue makeClearColor(float r, float g, float b, float a);
 
 	vk::ClearValue makeClearColor(float r, float g, float b);
+
+	vk::ClearValue makeClearDepthStencil(float depth, uint32_t stencil);
+
+	bool doesFormatSupportStencil(vk::Format const& format);
 }
 
 #endif //VULKAN_ENGINE_ALGORITHM_HPP

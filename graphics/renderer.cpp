@@ -2,9 +2,11 @@
 // Created by sabrina on 10/1/19.
 //
 
-// #define GLM_FORCE_RADIANS
-// #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-// #include <glm/vec4.hpp>
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+#include <glm/glm.hpp>
+#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -48,7 +50,7 @@ namespace Graphics {
 		presentMode = choosePresentMode(device->getPresentModes());
 		extent = chooseExtent(device->getCapabilities());
 		createSwapchain();
-		createDepthImage();// TODO (Impl in progress)
+		createDepthImage();
 		createRenderPass();
 		createFramebuffers();
 		createUniformBuffers();
@@ -185,13 +187,16 @@ namespace Graphics {
 			auto& commandBuffer = commandBuffers[i];
 			commandBuffer.begin(&beginInfo);
 			{
-				auto clearColor = Util::makeClearColor(0.0f, 0.0f, 0.0f);
+				std::array<vk::ClearValue, 2> clearValues = {
+					Util::makeClearColor(0.0f, 0.0f, 0.0f),
+					Util::makeClearDepthStencil(1.0f, 0u)
+				};
 				vk::RenderPassBeginInfo renderPassBeginInfo{
 					renderPass,
 					framebuffers[i],
 					{{0, 0}, extent},
-					1u,
-					&clearColor
+					static_cast<uint32_t>(clearValues.size()),
+					clearValues.data()
 				};
 
 				commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -292,9 +297,17 @@ namespace Graphics {
 		depthFormat = chooseSupportedFormat(formats, vk::ImageTiling::eOptimal,
 			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 
+		// Aspect Mask always has depth bit, only has stencil bit if supported by format
+		vk::ImageAspectFlags aspectMask = Util::doesFormatSupportStencil(depthFormat)
+										  ? vk::ImageAspectFlagBits::eDepth
+										  : vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+
 		depthImage = Image(allocator, device, extent.width, extent.height, depthFormat, vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth,
+			vk::ImageUsageFlagBits::eDepthStencilAttachment, aspectMask,
 			vma::MemoryUsage::eGpuOnly);
+
+		transitionImageLayout(depthImage, depthFormat, vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eDepthStencilAttachmentOptimal);
 	}
 
 	vk::Format Renderer::chooseSupportedFormat(const std::vector<vk::Format>& formats, vk::ImageTiling tiling,
@@ -310,33 +323,30 @@ namespace Graphics {
 	}
 
 	void Renderer::createRenderPass() {
-		std::vector<vk::AttachmentDescription> attachments;
-
-		// Color Attachment
-		attachments.emplace_back(
-			vk::AttachmentDescriptionFlags{},
-			surfaceFormat.format,
-			vk::SampleCountFlagBits::e1,
-			vk::AttachmentLoadOp::eClear,
-			vk::AttachmentStoreOp::eStore,
-			vk::AttachmentLoadOp::eDontCare,
-			vk::AttachmentStoreOp::eDontCare,
-			vk::ImageLayout::eUndefined,
-			vk::ImageLayout::ePresentSrcKHR
-		);
-
-		// Depth Attachment
-		attachments.emplace_back(
-			vk::AttachmentDescriptionFlags{},
-			depthFormat,
-			vk::SampleCountFlagBits::e1,
-			vk::AttachmentLoadOp::eDontCare,
-			vk::AttachmentStoreOp::eDontCare,
-			vk::AttachmentLoadOp::eLoad,
-			vk::AttachmentStoreOp::eStore,
-			vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eDepthStencilAttachmentOptimal
-		);
+		std::vector<vk::AttachmentDescription> attachments{
+			{   // Color Attachment
+				vk::AttachmentDescriptionFlags{},
+				surfaceFormat.format,
+				vk::SampleCountFlagBits::e1,
+				vk::AttachmentLoadOp::eClear,
+				vk::AttachmentStoreOp::eStore,
+				vk::AttachmentLoadOp::eDontCare,
+				vk::AttachmentStoreOp::eDontCare,
+				vk::ImageLayout::eUndefined,
+				vk::ImageLayout::ePresentSrcKHR
+			},
+			{   // Depth Attachment
+				vk::AttachmentDescriptionFlags{},
+				depthFormat,
+				vk::SampleCountFlagBits::e1,
+				vk::AttachmentLoadOp::eClear,
+				vk::AttachmentStoreOp::eDontCare,
+				vk::AttachmentLoadOp::eDontCare,
+				vk::AttachmentStoreOp::eDontCare,
+				vk::ImageLayout::eUndefined,
+				vk::ImageLayout::eDepthStencilAttachmentOptimal
+			}
+		};
 
 		vk::AttachmentReference colorReference{
 			0u,
@@ -486,8 +496,8 @@ namespace Graphics {
 		};
 		vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{
 			{},
-			false, // TODO: Set to true to enable depth testing
-			false, // TODO: Set to true to enable depth writing
+			true,
+			true,
 			vk::CompareOp::eLess,
 			false,
 			false
@@ -724,7 +734,7 @@ namespace Graphics {
 				from, to,
 				0u, 0u,
 				image,
-				{vk::ImageAspectFlagBits::eColor, 0u, 1u, 0u, 1u}
+				{aspectMaskForLayoutAndFormat(to, format), 0u, 1u, 0u, 1u}
 			};
 			commandBuffer.pipelineBarrier(pipelineStageForLayout(from), pipelineStageForLayout(to), {},
 				0u, nullptr,
@@ -751,6 +761,9 @@ namespace Graphics {
 				return vk::AccessFlagBits::eTransferWrite;
 			case vk::ImageLayout::eShaderReadOnlyOptimal:
 				return vk::AccessFlagBits::eShaderRead;
+			case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+				return vk::AccessFlagBits::eDepthStencilAttachmentRead |
+					vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 			default:
 				return vk::AccessFlags{};
 		}
@@ -764,6 +777,8 @@ namespace Graphics {
 				return vk::PipelineStageFlagBits::eTransfer;
 			case vk::ImageLayout::eShaderReadOnlyOptimal:
 				return vk::PipelineStageFlagBits::eFragmentShader;
+			case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+				return vk::PipelineStageFlagBits::eEarlyFragmentTests;
 			default:
 				return vk::PipelineStageFlags{};
 		}
@@ -781,5 +796,18 @@ namespace Graphics {
 			0.0f, true, 16.0f, false, vk::CompareOp::eAlways,
 			0.0f, 0.0f, vk::BorderColor::eIntOpaqueBlack, false
 		});
+	}
+
+	vk::ImageAspectFlags Renderer::aspectMaskForLayoutAndFormat(vk::ImageLayout const& layout,
+																vk::Format const& format) {
+		if (layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+			if (Util::doesFormatSupportStencil(format)) {
+				return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+			} else {
+				return vk::ImageAspectFlagBits::eDepth;
+			}
+		} else {
+			return vk::ImageAspectFlagBits::eColor;
+		}
 	}
 }
