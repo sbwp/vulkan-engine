@@ -11,8 +11,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
-
 #include <stb_image.h>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #include <algorithm>
 #include <chrono>
 
@@ -403,7 +406,7 @@ namespace Graphics {
 
 	void Renderer::createTextureImage() {
 		int width, height, channels;
-		stbi_uc* pixels = stbi_load("../assets/images/wizard.jpg", &width, &height, &channels, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load("../assets/textures/chalet.jpg", &width, &height, &channels, STBI_rgb_alpha);
 		vk::DeviceSize imageSize = width * height * 4;
 
 		if (!pixels) {
