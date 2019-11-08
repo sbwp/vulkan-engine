@@ -74,6 +74,7 @@ namespace Graphics {
 		vk::DescriptorPool descriptorPool;
 		std::vector<vk::DescriptorSet> descriptorSets;
 
+		std::unordered_map<Vertex, uint32_t> verticesHashMap;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 		UniformBufferObject ubo;

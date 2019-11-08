@@ -826,20 +826,25 @@ namespace Graphics {
 			"Failed to load object: " + warn + err);
 		for (const auto& shape : shapes) {
 			for (const auto& index : shape.mesh.indices) {
-				vertices.emplace_back(
+				Vertex vertex{
 					glm::vec3{
 						attrib.vertices[3 * index.vertex_index + 0],
 						attrib.vertices[3 * index.vertex_index + 1],
-					    attrib.vertices[3 * index.vertex_index + 2]
+						attrib.vertices[3 * index.vertex_index + 2]
 					},
-					glm::vec3{ 1.0f, 1.0f, 1.0f },
+					glm::vec3{1.0f, 1.0f, 1.0f},
 					glm::vec2{
 						attrib.texcoords[2 * index.texcoord_index + 0],
 						1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
 					}
-				);
-				indices.push_back(indices.size()); // TODO: Move vertices to unordered_map to remove duplicates
+				};
+				auto result = verticesHashMap.emplace(vertex, static_cast<uint32_t>(verticesHashMap.size()));
+				if (result.second) {
+					vertices.push_back(vertex);
+				}
+				indices.push_back((*(result.first)).second);
 			}
+			// Util::fillWithKeys(verticesHashMap, vertices);
 		}
 	}
 }

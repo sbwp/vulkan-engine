@@ -23,4 +23,8 @@ namespace Graphics {
 
 	Vertex::Vertex(glm::vec3 position, glm::vec3 color, glm::vec2 texCoord): position(position), color(color),
 																			 texCoord(texCoord) {}
+
+	bool Vertex::operator==(const Vertex& other) const {
+		return position == other.position && color == other.color && texCoord == other.texCoord;
+	}
 }
