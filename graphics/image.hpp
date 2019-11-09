@@ -14,9 +14,9 @@ namespace Graphics {
 	class Image {
 	public:
 		Image() = default;
-		Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, vk::Format format,
-			  vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage, vk::ImageAspectFlags const& aspectMask,
-			  vma::MemoryUsage memoryUsage);
+		Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, uint32_t mipLevels,
+			  vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage,
+			  vk::ImageAspectFlags const& aspectMask, vma::MemoryUsage memoryUsage);
 		Image(vk::Image image, vk::ImageView view, vma::Allocation allocation);
 		Image(vk::Image image, vk::ImageView view);
 		~Image();

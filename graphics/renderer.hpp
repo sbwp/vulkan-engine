@@ -79,7 +79,7 @@ namespace Graphics {
 		std::vector<uint32_t> indices;
 		UniformBufferObject ubo;
 
-		const uint32_t mipLevels = 1u; // TODO - actually implement miplevels
+		uint32_t mipLevels = 1u;
 
 		static vk::SurfaceFormatKHR chooseSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const& supportedFormats);
 		static vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR> const& supportedModes);
@@ -118,11 +118,13 @@ namespace Graphics {
 		void updateUniformBuffer(uint32_t index);
 		void copyMemory(vma::Allocation const& allocation, void* data, size_t size);
 		void runCommand(std::function<void(vk::CommandBuffer)> const& callback);
-		void transitionImageLayout(Image& image, vk::Format const& format, vk::ImageLayout const& from, vk::ImageLayout const& to);
+		void transitionImageLayout(Image& image, vk::Format const& format, uint32_t mipLevels,
+								   vk::ImageLayout const& from, vk::ImageLayout const& to);
 		void copyBufferToImage(Buffer& buffer, Image& image, uint32_t width, uint32_t height);
 		static vk::AccessFlags accessMaskForLayout(vk::ImageLayout const& layout);
 		static vk::PipelineStageFlags pipelineStageForLayout(vk::ImageLayout const& layout);
 		static vk::ImageAspectFlags aspectMaskForLayoutAndFormat(vk::ImageLayout const& layout, vk::Format const& format);
+		void generateMipmaps(Image image, int width, int height);
 	};
 }
 

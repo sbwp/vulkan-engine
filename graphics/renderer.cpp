@@ -6,7 +6,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include <glm/glm.hpp>
-#include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -306,11 +305,11 @@ namespace Graphics {
 										  ? vk::ImageAspectFlagBits::eDepth
 										  : vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
 
-		depthImage = Image(allocator, device, extent.width, extent.height, depthFormat, vk::ImageTiling::eOptimal,
+		depthImage = Image(allocator, device, extent.width, extent.height, 1u, depthFormat, vk::ImageTiling::eOptimal,
 			vk::ImageUsageFlagBits::eDepthStencilAttachment, aspectMask,
 			vma::MemoryUsage::eGpuOnly);
 
-		transitionImageLayout(depthImage, depthFormat, vk::ImageLayout::eUndefined,
+		transitionImageLayout(depthImage, depthFormat, 1u, vk::ImageLayout::eUndefined,
 			vk::ImageLayout::eDepthStencilAttachmentOptimal);
 	}
 
@@ -413,6 +412,7 @@ namespace Graphics {
 		if (!pixels) {
 			throw Logger::error("Failed to load image");
 		}
+		mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
 		auto stagingBuffer = Buffer(allocator, imageSize, vk::BufferUsageFlagBits::eTransferSrc,
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
@@ -422,16 +422,15 @@ namespace Graphics {
 
 		stbi_image_free(pixels);
 
-		textureImage = Image(allocator, device, static_cast<uint32_t>(width), static_cast<uint32_t>(height),
+		textureImage = Image(allocator, device, static_cast<uint32_t>(width), static_cast<uint32_t>(height), mipLevels,
 			vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::ImageAspectFlagBits::eColor,
-			vma::MemoryUsage::eGpuOnly);
+			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
+			vk::ImageAspectFlagBits::eColor, vma::MemoryUsage::eGpuOnly);
 
-		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eUndefined,
+		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, mipLevels, vk::ImageLayout::eUndefined,
 			vk::ImageLayout::eTransferDstOptimal);
 		copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, vk::ImageLayout::eTransferDstOptimal,
-			vk::ImageLayout::eShaderReadOnlyOptimal);
+		generateMipmaps(textureImage, width, height);
 	}
 
 	void Renderer::createGraphicsPipeline() {
@@ -730,15 +729,19 @@ namespace Graphics {
 		device->graphicsQueue.submit(1u, &submitInfo, vk::Fence{});
 	}
 
-	void Renderer::transitionImageLayout(Image& image, vk::Format const& format, vk::ImageLayout const& from,
-										 vk::ImageLayout const& to) {
+	void Renderer::transitionImageLayout(Image& image, vk::Format const& format, uint32_t mipLevels,
+										 vk::ImageLayout const& from, vk::ImageLayout const& to) {
 		runCommand([&](vk::CommandBuffer const& commandBuffer) {
 			vk::ImageMemoryBarrier barrier{
 				accessMaskForLayout(from), accessMaskForLayout(to),
 				from, to,
 				0u, 0u,
 				image,
-				{aspectMaskForLayoutAndFormat(to, format), 0u, 1u, 0u, 1u}
+				{
+					aspectMaskForLayoutAndFormat(to, format),
+					0u, mipLevels,
+					0u, 1u
+				}
 			};
 			commandBuffer.pipelineBarrier(pipelineStageForLayout(from), pipelineStageForLayout(to), {},
 				0u, nullptr,
@@ -793,12 +796,13 @@ namespace Graphics {
 			{},
 			vk::Filter::eLinear,
 			vk::Filter::eLinear,
-			vk::SamplerMipmapMode::eNearest,
+			vk::SamplerMipmapMode::eLinear,
 			vk::SamplerAddressMode::eRepeat,
 			vk::SamplerAddressMode::eRepeat,
 			vk::SamplerAddressMode::eRepeat,
 			0.0f, true, 16.0f, false, vk::CompareOp::eAlways,
-			0.0f, 0.0f, vk::BorderColor::eIntOpaqueBlack, false
+			0.0f, static_cast<float>(mipLevels), vk::BorderColor::eIntOpaqueBlack,
+			false
 		});
 	}
 
@@ -846,5 +850,78 @@ namespace Graphics {
 			}
 			// Util::fillWithKeys(verticesHashMap, vertices);
 		}
+	}
+
+	// TODO: provide pre-built mipmaps, remove software generation of mipmaps to improve load times
+	void Renderer::generateMipmaps(Image image, int width, int height) {
+		runCommand([&](vk::CommandBuffer const& commandBuffer) {
+			vk::ImageMemoryBarrier barrier{
+				{}, {}, vk::ImageLayout::eUndefined, vk::ImageLayout::eUndefined,
+				0u, 0u, image,
+				{vk::ImageAspectFlagBits::eColor, 0u, 1u, 0u, 1u}
+			};
+
+			int mipWidth = width;
+			int mipHeight = height;
+			for (uint32_t i = 1; i < mipLevels; ++i) {
+				barrier.subresourceRange.baseMipLevel = i - 1;
+				barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+				barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+				barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+				barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+				commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+					vk::PipelineStageFlagBits::eTransfer, {},
+					0u, nullptr,
+					0u, nullptr,
+					1u, &barrier);
+
+				vk::ImageBlit blit{
+					{ vk::ImageAspectFlagBits::eColor, i - 1, 0u, 1u },
+					std::array<vk::Offset3D, 2>{
+						vk::Offset3D{0, 0, 0},
+						vk::Offset3D{mipWidth, mipHeight, 1}
+					},
+					{ vk::ImageAspectFlagBits::eColor, i, 0u, 1u },
+					std::array<vk::Offset3D, 2>{
+						vk::Offset3D{0, 0, 0},
+						vk::Offset3D{mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}
+					}
+				};
+				commandBuffer.blitImage(image, vk::ImageLayout::eTransferSrcOptimal,
+					image, vk::ImageLayout::eTransferDstOptimal,
+					1u, &blit, vk::Filter::eLinear);
+
+				barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+				barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+				barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+				commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+					vk::PipelineStageFlagBits::eFragmentShader, {},
+					0u, nullptr,
+					0u, nullptr,
+					1u, &barrier);
+
+				if (mipWidth > 1) {
+					mipWidth /= 2;
+				}
+				if (mipHeight > 1) {
+					mipHeight /= 2;
+				}
+			}
+
+			// After loop, transition final mip level to shader read only optimal
+			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+			barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+			commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eFragmentShader, {},
+				0u, nullptr,
+				0u, nullptr,
+				1u, &barrier);
+		});
 	}
 }
