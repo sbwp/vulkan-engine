@@ -14,7 +14,8 @@ namespace Graphics {
 
 	Image::Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, uint32_t mipLevels,
 				 vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage,
-				 vk::ImageAspectFlags const& aspectMask, vma::MemoryUsage memoryUsage) {
+				 vk::ImageAspectFlags const& aspectMask, vk::SampleCountFlagBits const& sampleCount,
+				 vma::MemoryUsage memoryUsage) {
 		auto imageAllocation = allocator.createImage({
 			{},
 			vk::ImageType::e2D,
@@ -22,7 +23,7 @@ namespace Graphics {
 			{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1u},
 			mipLevels,
 			1u,
-			vk::SampleCountFlagBits::e1,
+			sampleCount,
 			tiling,
 			imageUsage
 		}, {
@@ -53,10 +54,11 @@ namespace Graphics {
 		return view;
 	}
 
-	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView) {
-		attachments = new vk::ImageView[2]{
+	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView, vk::ImageView colorImageView) {
+		attachments = new vk::ImageView[3]{
+			colorImageView,
+			depthImageView,
 			view,
-			depthImageView
 		};
 
 		return attachments;

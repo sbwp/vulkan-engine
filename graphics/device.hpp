@@ -44,7 +44,7 @@ namespace Graphics {
 
 		std::vector<vk::Framebuffer> createFramebuffers(vk::FramebufferCreateInfo createInfo,
 														std::vector<Image> const& images,
-														vk::ImageView const& depthView);
+														vk::ImageView const& depthView, vk::ImageView const& colorView);
 
 		void createLogicalDevice(std::vector<char const*> const& deviceExtensions,
 								 std::vector<char const*> const& validationLayers);
@@ -72,16 +72,15 @@ namespace Graphics {
 															  vk::DeviceSize size);
 		void updateDescriptorSets(std::vector<vk::WriteDescriptorSet> sets);
 		vk::Sampler createSampler(vk::SamplerCreateInfo const& createInfo);
+		vk::SampleCountFlagBits getSamples();
 	private:
 		vk::PhysicalDevice physicalDevice;
 		vk::Device logicalDevice;
 		vk::SurfaceKHR& surface;
+		vk::SampleCountFlagBits msaaSamples;
 
 		std::vector<vk::QueueFamilyProperties> queueFamilies;
 		std::vector<vk::ExtensionProperties> extensionProperties;
-
-		vk::PhysicalDeviceMemoryProperties memoryProperties;
-		vk::PhysicalDeviceProperties properties;
 
 		std::optional<uint32_t> graphicsQueueFamilyIndex;
 		std::optional<uint32_t> presentQueueFamilyIndex;

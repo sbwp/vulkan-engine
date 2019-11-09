@@ -16,8 +16,9 @@ namespace Graphics {
 		extensionProperties = physicalDevice.enumerateDeviceExtensionProperties();
 		Logger::assertNotEmpty(extensionProperties, "Device supports no extensions.");
 
-		memoryProperties = physicalDevice.getMemoryProperties();
-		properties = physicalDevice.getProperties();
+		auto properties = physicalDevice.getProperties();
+		msaaSamples = Util::maxSampleCount(properties.limits.framebufferColorSampleCounts & properties.limits.framebufferDepthSampleCounts);
+
 		graphicsQueueFamilyIndex = findGraphicsQueueFamilyIndex();
 		presentQueueFamilyIndex = findPresentQueueFamilyIndex();
 		rating = rate(deviceExtensions);
@@ -99,6 +100,7 @@ namespace Graphics {
 
 		vk::PhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = true;
+		deviceFeatures.sampleRateShading = true;
 
 		logicalDevice = physicalDevice.createDevice({
 			{},
@@ -223,12 +225,13 @@ namespace Graphics {
 
 	std::vector<vk::Framebuffer> Device::createFramebuffers(vk::FramebufferCreateInfo createInfo,
 															std::vector<Image> const& images,
-															vk::ImageView const& depthView) {
+															vk::ImageView const& depthView,
+															vk::ImageView const& colorView) {
 		std::vector<vk::Framebuffer> framebuffers{};
 		framebuffers.reserve(images.size());
 
 		for (auto image : images) {
-			createInfo.pAttachments = image.setupAttachments(depthView);
+			createInfo.pAttachments = image.setupAttachments(depthView, colorView);
 			framebuffers.push_back(logicalDevice.createFramebuffer(createInfo));
 		}
 
@@ -343,5 +346,9 @@ namespace Graphics {
 
 	vk::Sampler Device::createSampler(vk::SamplerCreateInfo const& createInfo) {
 		return logicalDevice.createSampler(createInfo);
+	}
+
+	vk::SampleCountFlagBits Device::getSamples() {
+		return msaaSamples;
 	}
 }

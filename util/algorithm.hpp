@@ -40,6 +40,8 @@ namespace Util {
 	vk::ClearValue makeClearDepthStencil(float depth, uint32_t stencil);
 
 	bool doesFormatSupportStencil(vk::Format const& format);
+
+	vk::SampleCountFlagBits maxSampleCount(vk::SampleCountFlags const& supportedSampleCounts);
 }
 
 #endif //VULKAN_ENGINE_ALGORITHM_HPP

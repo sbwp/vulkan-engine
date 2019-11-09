@@ -57,8 +57,9 @@ namespace Graphics {
 		vk::Extent2D extent;
 		vk::SwapchainKHR swapchain;
 		std::vector<Image> images;
-		vk::Format depthFormat;
+		Image colorImage;
 		Image depthImage;
+		vk::Format depthFormat;
 		vk::RenderPass renderPass;
 		std::vector<vk::Framebuffer> framebuffers;
 		vk::PipelineLayout pipelineLayout;
@@ -78,6 +79,7 @@ namespace Graphics {
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
 		UniformBufferObject ubo;
+		vk::SampleCountFlagBits msaaSamples = vk::SampleCountFlagBits::e1;
 
 		uint32_t mipLevels = 1u;
 
@@ -125,6 +127,7 @@ namespace Graphics {
 		static vk::PipelineStageFlags pipelineStageForLayout(vk::ImageLayout const& layout);
 		static vk::ImageAspectFlags aspectMaskForLayoutAndFormat(vk::ImageLayout const& layout, vk::Format const& format);
 		void generateMipmaps(Image image, int width, int height);
+		void createColorImage();
 	};
 }
 

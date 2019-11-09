@@ -36,4 +36,15 @@ namespace Util {
 	bool doesFormatSupportStencil(vk::Format const& format) {
 		return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
 	}
+
+	vk::SampleCountFlagBits maxSampleCount(vk::SampleCountFlags const& supportedSampleCounts) {
+		return supportedSampleCounts & vk::SampleCountFlagBits::e64 ? vk::SampleCountFlagBits::e64
+			   : supportedSampleCounts & vk::SampleCountFlagBits::e32 ? vk::SampleCountFlagBits::e32
+				 : supportedSampleCounts & vk::SampleCountFlagBits::e16 ? vk::SampleCountFlagBits::e16
+				   : supportedSampleCounts & vk::SampleCountFlagBits::e8 ? vk::SampleCountFlagBits::e8
+					 : supportedSampleCounts & vk::SampleCountFlagBits::e4 ? vk::SampleCountFlagBits::e4
+					   : supportedSampleCounts & vk::SampleCountFlagBits::e2 ? vk::SampleCountFlagBits::e2
+						 : vk::SampleCountFlagBits::e1;
+	}
+
 }

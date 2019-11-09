@@ -53,6 +53,7 @@ namespace Graphics {
 		presentMode = choosePresentMode(device->getPresentModes());
 		extent = chooseExtent(device->getCapabilities());
 		createSwapchain();
+		createColorImage();
 		createDepthImage();
 		createRenderPass();
 		createFramebuffers();
@@ -306,7 +307,7 @@ namespace Graphics {
 										  : vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
 
 		depthImage = Image(allocator, device, extent.width, extent.height, 1u, depthFormat, vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eDepthStencilAttachment, aspectMask,
+			vk::ImageUsageFlagBits::eDepthStencilAttachment, aspectMask, device->getSamples(),
 			vma::MemoryUsage::eGpuOnly);
 
 		transitionImageLayout(depthImage, depthFormat, 1u, vk::ImageLayout::eUndefined,
@@ -330,24 +331,35 @@ namespace Graphics {
 			{   // Color Attachment
 				vk::AttachmentDescriptionFlags{},
 				surfaceFormat.format,
-				vk::SampleCountFlagBits::e1,
+				device->getSamples(),
 				vk::AttachmentLoadOp::eClear,
 				vk::AttachmentStoreOp::eStore,
 				vk::AttachmentLoadOp::eDontCare,
 				vk::AttachmentStoreOp::eDontCare,
 				vk::ImageLayout::eUndefined,
-				vk::ImageLayout::ePresentSrcKHR
+				vk::ImageLayout::eColorAttachmentOptimal
 			},
 			{   // Depth Attachment
 				vk::AttachmentDescriptionFlags{},
 				depthFormat,
-				vk::SampleCountFlagBits::e1,
+				device->getSamples(),
 				vk::AttachmentLoadOp::eClear,
 				vk::AttachmentStoreOp::eDontCare,
 				vk::AttachmentLoadOp::eDontCare,
 				vk::AttachmentStoreOp::eDontCare,
 				vk::ImageLayout::eUndefined,
 				vk::ImageLayout::eDepthStencilAttachmentOptimal
+			},
+			{   // Resolve Attachment
+				vk::AttachmentDescriptionFlags{},
+				surfaceFormat.format,
+				vk::SampleCountFlagBits::e1,
+				vk::AttachmentLoadOp::eDontCare,
+				vk::AttachmentStoreOp::eStore,
+				vk::AttachmentLoadOp::eDontCare,
+				vk::AttachmentStoreOp::eDontCare,
+				vk::ImageLayout::eUndefined,
+				vk::ImageLayout::ePresentSrcKHR
 			}
 		};
 
@@ -361,6 +373,11 @@ namespace Graphics {
 			vk::ImageLayout::eDepthStencilAttachmentOptimal
 		};
 
+		vk::AttachmentReference resolveReference{
+			2u,
+			vk::ImageLayout::eColorAttachmentOptimal
+		};
+
 		vk::SubpassDescription subpassDescription{
 			{},
 			vk::PipelineBindPoint::eGraphics,
@@ -368,7 +385,7 @@ namespace Graphics {
 			nullptr,
 			1u,
 			&colorReference,
-			nullptr,
+			&resolveReference,
 			&depthReference
 		};
 
@@ -396,12 +413,12 @@ namespace Graphics {
 		framebuffers = device->createFramebuffers({
 			{},
 			renderPass,
-			2u,
+			3u,
 			nullptr,
 			extent.width,
 			extent.height,
 			1u
-		}, images, depthImage);
+		}, images, depthImage, colorImage);
 	}
 
 	void Renderer::createTextureImage() {
@@ -424,8 +441,9 @@ namespace Graphics {
 
 		textureImage = Image(allocator, device, static_cast<uint32_t>(width), static_cast<uint32_t>(height), mipLevels,
 			vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
-			vk::ImageAspectFlagBits::eColor, vma::MemoryUsage::eGpuOnly);
+			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled |
+				vk::ImageUsageFlagBits::eTransferSrc,
+			vk::ImageAspectFlagBits::eColor, vk::SampleCountFlagBits::e1, vma::MemoryUsage::eGpuOnly);
 
 		transitionImageLayout(textureImage, vk::Format::eR8G8B8A8Unorm, mipLevels, vk::ImageLayout::eUndefined,
 			vk::ImageLayout::eTransferDstOptimal);
@@ -493,9 +511,9 @@ namespace Graphics {
 
 		vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo{
 			{},
-			vk::SampleCountFlagBits::e1,
-			false,
-			1.0f
+			device->getSamples(),
+			true,
+			0.2f
 		};
 		vk::PipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo{
 			{},
@@ -923,5 +941,13 @@ namespace Graphics {
 				0u, nullptr,
 				1u, &barrier);
 		});
+	}
+
+	void Renderer::createColorImage() {
+		auto format = surfaceFormat.format;
+
+		colorImage = Image(allocator, device, extent.width, extent.height, 1u, format, vk::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
+			vk::ImageAspectFlagBits::eColor, device->getSamples(), vma::MemoryUsage::eGpuOnly);
 	}
 }

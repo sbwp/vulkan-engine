@@ -16,12 +16,13 @@ namespace Graphics {
 		Image() = default;
 		Image(vma::Allocator& allocator, Device* device, uint32_t width, uint32_t height, uint32_t mipLevels,
 			  vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags const& imageUsage,
-			  vk::ImageAspectFlags const& aspectMask, vma::MemoryUsage memoryUsage);
+			  vk::ImageAspectFlags const& aspectMask, vk::SampleCountFlagBits const& sampleCount,
+			  vma::MemoryUsage memoryUsage);
 		Image(vk::Image image, vk::ImageView view, vma::Allocation allocation);
 		Image(vk::Image image, vk::ImageView view);
 		~Image();
 
-		vk::ImageView* setupAttachments(vk::ImageView depthImageView);
+		vk::ImageView* setupAttachments(vk::ImageView depthImageView, vk::ImageView colorImageView);
 		operator vk::Image(); // NOLINT
 		operator vk::ImageView(); // NOLINT
 	private:
