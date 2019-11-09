@@ -22,7 +22,6 @@ namespace Graphics {
 		Image(vk::Image image, vk::ImageView view);
 		~Image();
 
-		vk::ImageView* setupAttachments(vk::ImageView depthImageView, vk::ImageView colorImageView);
 		operator vk::Image(); // NOLINT
 		operator vk::ImageView(); // NOLINT
 	private:

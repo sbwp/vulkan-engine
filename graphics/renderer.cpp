@@ -413,7 +413,7 @@ namespace Graphics {
 		framebuffers = device->createFramebuffers({
 			{},
 			renderPass,
-			3u,
+			0u,
 			nullptr,
 			extent.width,
 			extent.height,

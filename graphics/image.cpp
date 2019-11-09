@@ -53,14 +53,4 @@ namespace Graphics {
 	Image::operator vk::ImageView() {
 		return view;
 	}
-
-	vk::ImageView* Image::setupAttachments(vk::ImageView depthImageView, vk::ImageView colorImageView) {
-		attachments = new vk::ImageView[3]{
-			colorImageView,
-			depthImageView,
-			view,
-		};
-
-		return attachments;
-	}
 }

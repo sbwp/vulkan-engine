@@ -227,11 +227,16 @@ namespace Graphics {
 															std::vector<Image> const& images,
 															vk::ImageView const& depthView,
 															vk::ImageView const& colorView) {
+		std::vector<vk::ImageView> attachments{
+			colorView, depthView, {}
+		};
+		createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+
 		std::vector<vk::Framebuffer> framebuffers{};
 		framebuffers.reserve(images.size());
-
 		for (auto image : images) {
-			createInfo.pAttachments = image.setupAttachments(depthView, colorView);
+			attachments[2] = image;
+			createInfo.pAttachments = attachments.data();
 			framebuffers.push_back(logicalDevice.createFramebuffer(createInfo));
 		}
 
